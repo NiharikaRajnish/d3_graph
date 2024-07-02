@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { Button, Typography } from '@mui/material';
 import { Add, Remove } from '@mui/icons-material';
-import NodePopover from './NodePopover'; // Adjust the path as per your project structure
+import NodePopover from './NodePopover'; // Adjust import path as per your project structure
+import LinkPopover from './LinkPopover'; // Adjust import path as per your project structure
 
 const width = 1500;
 const height = 600;
@@ -12,7 +13,8 @@ const NetworkGraph = () => {
     const [links, setLinks] = useState([]);
     const [selectedNode, setSelectedNode] = useState(null);
     const [selectedLink, setSelectedLink] = useState(null);
-    const [anchorEl, setAnchorEl] = useState(null);
+    const [anchorElNode, setAnchorElNode] = useState(null);
+    const [anchorElLink, setAnchorElLink] = useState(null);
     const [linkingNode, setLinkingNode] = useState(null);
     const [linkingMessage, setLinkingMessage] = useState('');
     const svgRef = useRef(null);
@@ -31,7 +33,19 @@ const NetworkGraph = () => {
                 .attr('x1', d => d.source.x)
                 .attr('y1', d => d.source.y)
                 .attr('x2', d => d.target.x)
-                .attr('y2', d => d.target.y);
+                .attr('y2', d => d.target.y)
+                .attr('stroke', d => {
+                    switch (d.type) {
+                        case 'Assesses':
+                            return 'lightblue';
+                        case 'Comes After':
+                            return 'red';
+                        case 'Is Part Of':
+                            return 'grey';
+                        default:
+                            return '#df0d0d'; // Default color for unrecognized types
+                    }
+                });
 
             svg.selectAll('.node')
                 .attr('transform', d => `translate(${d.x},${d.y})`);
@@ -42,7 +56,6 @@ const NetworkGraph = () => {
                 .attr('transform', d => `scale(${getNodeScale(d.size)})`);
 
             svg.selectAll('.node text')
-                .attr('font-weight', 'bold')
                 .text(d => d.name); // Update node's label text
         };
 
@@ -59,7 +72,19 @@ const NetworkGraph = () => {
             const linkEnter = link.enter().append('line')
                 .attr('class', 'link')
                 .on('click', linkClicked) // Add click handler for links
-                .merge(link);
+                .merge(link)
+                .attr('stroke', d => {
+                    switch (d.type) {
+                        case 'Assesses':
+                            return 'lightblue';
+                        case 'Comes After':
+                            return 'red';
+                        case 'Is Part Of':
+                            return 'grey';
+                        default:
+                            return '#df0d0d'; // Default color for unrecognized types
+                    }
+                });
 
             const node = svg.selectAll('.node')
                 .data(nodes, d => d.id);
@@ -135,7 +160,7 @@ const NetworkGraph = () => {
             } else {
                 setSelectedNode(d);
                 setSelectedLink(null); // Deselect link if a node is clicked
-                setAnchorEl(event.currentTarget);
+                setAnchorElNode(event.currentTarget); // Set anchor for node popover
                 updateNodeBorders(d.id); // Add this line to update node borders
 
                 // Deselect any previously clicked link
@@ -146,7 +171,8 @@ const NetworkGraph = () => {
         function linkClicked(event, d) {
             setSelectedLink(d);
             setSelectedNode(null); // Deselect node if a link is clicked
-            updateLinkBorders(d.id);
+            setAnchorElLink(event.currentTarget); // Set anchor for link popover
+            updateLinkBorders(d.id); // Update link borders
 
             // Deselect any previously clicked node
             updateNodeBorders(null);
@@ -184,7 +210,7 @@ const NetworkGraph = () => {
                 .attr('stroke-width', d => (d.id === selectedNodeId ? 0.5 : 0));
         }
 
-        function updateLinkBorders(selectedLinkId){
+        function updateLinkBorders(selectedLinkId) {
             d3.select(svgRef.current).selectAll('.link')
                 .attr('stroke', d => (d === selectedLinkId ? 'black' : '#df0d0d'))
                 .attr('stroke-width', d => (d === selectedLinkId ? 5 : 3))
@@ -193,8 +219,12 @@ const NetworkGraph = () => {
 
     }, [nodes, links]);
 
-    const handleClose = () => {
-        setAnchorEl(null);
+    const handleCloseNode = () => {
+        setAnchorElNode(null);
+        setLinkingMessage('');
+    };
+    const handleCloseLink = () => {
+        setAnchorElLink(null);
         setLinkingMessage('');
     };
 
@@ -227,6 +257,12 @@ const NetworkGraph = () => {
             setNodes([...nodes]); // Trigger re-render to update node size
         }
     };
+    const handleTypeChange = (newType) => {
+        if (selectedLink) {
+            selectedLink.type = newType;
+            setLinks([...links]); // Trigger re-render to update link type
+        }
+    };
 
     const handleRenameNode = (newName) => {
         if (selectedNode) {
@@ -234,7 +270,6 @@ const NetworkGraph = () => {
             setNodes([...nodes]); // Trigger re-render to update node name
         }
     };
-    
 
     const handleAddNode = () => {
         const id = nodes.length ? nodes[nodes.length - 1].id + 1 : 1;
@@ -257,7 +292,7 @@ const NetworkGraph = () => {
 
     const handleAddLink = () => {
         setLinkingNode(selectedNode);
-        setAnchorEl(null);
+        setAnchorElNode(null);
         setLinkingMessage('Click another node to establish a link');
     };
 
@@ -271,8 +306,7 @@ const NetworkGraph = () => {
         }
     };
 
-    const open = Boolean(anchorEl) && !linkingNode;
-    const id = open ? 'node-popover' : undefined;
+
 
     return (
         <div>
@@ -296,17 +330,30 @@ const NetworkGraph = () => {
                     {linkingMessage}
                 </Typography>
             )}
-            <NodePopover
-                id={id}
-                open={open}
-                anchorEl={anchorEl}
-                onClose={handleClose}
-                handleAddLink={handleAddLink}
-                selectedNode={selectedNode}
+            {selectedNode && (
+                <NodePopover
+                    id="node-popover"
+                    open={Boolean(anchorElNode)}
+                    anchorEl={anchorElNode}
+                    onClose={handleCloseNode}
+                    handleAddLink={handleAddLink}
+                    selectedNode={selectedNode}
                 handleShapeChange={handleShapeChange}
                 handleSizeChange={handleSizeChange}
                 handleRenameNode={handleRenameNode}
-            />
+                />
+            )}
+            {selectedLink && (
+                <LinkPopover
+                    id="link-popover"
+                    open={Boolean(anchorElLink)}
+                    anchorEl={anchorElLink}
+                    onClose={handleCloseLink}
+                    handleTypeChange={handleTypeChange}
+                    handleRemoveLink={handleRemoveLink}
+                    selectedLink={selectedLink}
+                />
+            )}
         </div>
     );
 };
