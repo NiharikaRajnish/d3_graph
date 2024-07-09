@@ -71,9 +71,10 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
                 }}
                 margin="dense"
                 size="small"
+              
                 style={{ marginLeft: '4px', marginRight: '4px', width: '130px' }}
             >
-                <option value="Automic ER">Automic ER</option>
+                <option value="Atomic ER">Atomic ER</option>
                 <option value="aER">aER</option>
                 <option value="iER">iER</option>
                 <option value="rER">rER</option>

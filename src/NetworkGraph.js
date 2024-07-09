@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { Button, Typography } from '@mui/material';
-import { Add, Remove } from '@mui/icons-material';
+import { MenuItem, Select, FormControl, InputLabel } from '@mui/material';
+import { Add, Remove, FilterList } from '@mui/icons-material';
 import NodePopover from './NodePopover'; // Adjust import path as per your project structure
 import LinkPopover from './LinkPopover'; // Adjust import path as per your project structure
 
@@ -9,14 +10,21 @@ const width = 1500;
 const height = 600;
 
 const NetworkGraph = () => {
-    const [nodes, setNodes] = useState([]);
-    const [links, setLinks] = useState([]);
+    const initialNodes = [
+        { id: 1, name: 'start', shape: 'diamond', size: 10, color: 'green', fx: 100, fy: height / 2, fixed: true }, // Fixed position for start node
+        { id: 2, name: 'end', shape: 'diamond', size: 10, color: 'green', fx: width - 200, fy: height / 2, fixed: true } // Fixed position for end node
+    ];
+    const initialLinks = [];
+
+    const [nodes, setNodes] = useState(initialNodes);
+    const [links, setLinks] = useState(initialLinks);
     const [selectedNode, setSelectedNode] = useState(null);
     const [selectedLink, setSelectedLink] = useState(null);
     const [anchorElNode, setAnchorElNode] = useState(null);
     const [anchorElLink, setAnchorElLink] = useState(null);
     const [linkingNode, setLinkingNode] = useState(null);
     const [linkingMessage, setLinkingMessage] = useState('');
+    const [filterType, setFilterType] = useState('');
     const svgRef = useRef(null);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
     const linkingNodeRef = useRef(linkingNode);
@@ -30,20 +38,44 @@ const NetworkGraph = () => {
 
         const ticked = () => {
             svg.selectAll('.link')
-                .attr('x1', d => d.source.x)
-                .attr('y1', d => d.source.y)
-                .attr('x2', d => d.target.x)
-                .attr('y2', d => d.target.y)
+                .attr('x1', d => {
+                    if (d.type === 'Is Part Of') {
+                        return d.source.x;
+                    } else {
+                        return d.source.x < d.target.x ? d.source.x + (d.source.size * 3.2) : d.source.x - (d.source.size * 3.2);
+                    }
+                })
+                .attr('y1', d => {
+                    if (d.type === 'Is Part Of') {
+                        return d.source.y + (d.target.size* 3.2) ;
+                    } else {
+                        return d.source.y;
+                    }
+                })
+                .attr('x2', d => {
+                    if (d.type === 'Is Part Of') {
+                        return d.target.x;
+                    } else {
+                        return d.source.x < d.target.x ? d.target.x - (d.target.size * 3.2) : d.target.x + (d.target.size * 3.2);
+                    }
+                })
+                .attr('y2', d => {
+                    if (d.type === 'Is Part Of') {
+                        return d.target.y - (d.target.size* 3.2) ;
+                    } else {
+                        return d.target.y;
+                    }
+                })
                 .attr('stroke', d => {
                     switch (d.type) {
                         case 'Assesses':
                             return 'lightblue';
                         case 'Comes After':
-                            return 'red';
+                            return '#df0d0d';
                         case 'Is Part Of':
                             return 'grey';
                         default:
-                            return '#df0d0d'; // Default color for unrecognized types
+                            return '#df0d0d'; 
                     }
                 });
 
@@ -87,13 +119,14 @@ const NetworkGraph = () => {
                 });
 
             const node = svg.selectAll('.node')
-                .data(nodes, d => d.id);
+                .data(nodes.filter(n => !n.hidden), d => d.id);
 
             node.exit().remove();
 
             const nodeEnter = node.enter().append('g')
                 .attr('class', 'node')
                 .call(d3.drag()
+                    .filter(d => !d.fx && !d.fy)
                     .on('start', dragStarted)
                     .on('drag', dragged)
                     .on('end', dragEnded))
@@ -103,7 +136,7 @@ const NetworkGraph = () => {
                 .attr('class', 'nodeShape')
                 .attr('d', d => getShapePath(d.shape))
                 .attr('fill', d => d.color || color(d.type))
-                .attr('transform', d => `scale(${getNodeScale(d.size)})`)
+                // .attr('transform', d => `scale(${getNodeScale(d.size)})`)
                 .attr('stroke', 'none') // Initialize stroke to none
                 .attr('stroke-width', 0); // Initialize stroke width to 0
 
@@ -114,7 +147,8 @@ const NetworkGraph = () => {
                 .attr('font-size', d => getNodeSize(d.size) / 2) // Dynamically set font size based on node size
                 .text(d => d.name);
 
-            node.merge(nodeEnter);
+            node.merge(nodeEnter)
+                .attr('transform', d => `translate(${d.fx},${d.fy})`)
 
             simulation.nodes(nodes);
             simulation.force('link').links(links);
@@ -127,19 +161,25 @@ const NetworkGraph = () => {
 
         function dragStarted(event, d) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
+            if (!d.fixed) {
+                d.fx = d.x;
+                d.fy = d.y;
+            }
         }
 
         function dragged(event, d) {
-            d.fx = event.x;
-            d.fy = event.y;
+            if (!d.fixed) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
         }
 
         function dragEnded(event, d) {
             if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
+            if (!d.fixed) {
+                d.fx = null;
+                d.fy = null;
+            }
         }
 
         function nodeClicked(event, d) {
@@ -183,7 +223,9 @@ const NetworkGraph = () => {
 
         function getShapePath(shape) {
             switch (shape) {
-                case 'Automic ER':
+                case 'diamond':
+                    return d3.symbol().type(d3.symbolDiamond)();
+                case 'Atomic ER':
                     return d3.symbol().type(d3.symbolCircle)();
                 case 'aER':
                     return d3.symbol().type(d3.symbolSquare)();
@@ -197,11 +239,11 @@ const NetworkGraph = () => {
         }
 
         function getNodeSize(size) {
-            return Math.sqrt(size) * 2; // Adjust scale factor based on your preference
+            return Math.sqrt(size) * 2;
         }
 
         function getNodeScale(size) {
-            return Math.sqrt(size) * 2; // Adjust scale factor based on your preference
+            return Math.sqrt(size) * 2;
         }
 
         function updateNodeBorders(selectedNodeId) {
@@ -232,7 +274,7 @@ const NetworkGraph = () => {
         if (selectedNode) {
             selectedNode.shape = newShape;
             switch (newShape) {
-                case 'Automic ER':
+                case 'Atomic ER':
                     selectedNode.color = '#ADD8E6';
                     break;
                 case 'aER':
@@ -274,7 +316,7 @@ const NetworkGraph = () => {
     const handleAddNode = () => {
         const id = nodes.length ? nodes[nodes.length - 1].id + 1 : 1;
         const name = `Node ${id}`;
-        const newNode = { id, name, shape: 'circle', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2 };
+        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2 };
         setNodes([...nodes, newNode]);
     };
 
@@ -306,13 +348,34 @@ const NetworkGraph = () => {
         }
     };
 
-
+    const handleFilterNodes = (filterType) => {
+        setNodes(nodes.map(node => ({
+            ...node,
+            hidden: (node.id === 1 || node.id === 2) ? false : (filterType ? node.shape !== filterType : false)
+        })));
+    };
 
     return (
         <div>
             <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add Node</Button>
             <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button>
-            <Button onClick={handleRemoveLink} startIcon={<Remove />} variant="outlined">Remove Link</Button>
+            <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px' , margin: '6px', width: '150px'}}>
+            <InputLabel>Filter Nodes</InputLabel>
+            <Select
+            value={filterType}
+            onChange={(e) => {
+            setFilterType(e.target.value);
+            handleFilterNodes(e.target.value);
+        }}
+            label="Filter Nodes"
+            >
+            <MenuItem value=""><em>None</em></MenuItem>
+            <MenuItem value="Atomic ER">Atomic ER</MenuItem> 
+            <MenuItem value="aER">aER</MenuItem>
+            <MenuItem value="iER">iER</MenuItem>
+            <MenuItem value="rER">rER</MenuItem>
+            </Select>
+            </FormControl>
             <svg ref={svgRef} width={width} height={height}></svg>
             {linkingMessage && (
                 <Typography
@@ -338,9 +401,9 @@ const NetworkGraph = () => {
                     onClose={handleCloseNode}
                     handleAddLink={handleAddLink}
                     selectedNode={selectedNode}
-                handleShapeChange={handleShapeChange}
-                handleSizeChange={handleSizeChange}
-                handleRenameNode={handleRenameNode}
+                    handleShapeChange={handleShapeChange}
+                    handleSizeChange={handleSizeChange}
+                    handleRenameNode={handleRenameNode}
                 />
             )}
             {selectedLink && (

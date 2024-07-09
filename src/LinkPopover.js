@@ -26,8 +26,9 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
             <FormControl style={{ margin: '8px' }}>
                 <InputLabel>Type</InputLabel>
                 <Select
-                    value={selectedLink ? selectedLink.type : ''}
-                    onChange={handleChange}
+                   value={selectedLink && selectedLink.type ? selectedLink.type : 'Comes After'}
+                   onChange={handleChange}
+                    
                 >
                     <MenuItem value="Comes After">Comes After</MenuItem>
                     <MenuItem value="Is Part Of">Is Part Of</MenuItem>
