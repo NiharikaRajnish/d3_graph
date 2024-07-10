@@ -47,7 +47,7 @@ const NetworkGraph = () => {
                 })
                 .attr('y1', d => {
                     if (d.type === 'Is Part Of') {
-                        return d.source.y + (d.target.size* 3.2) ;
+                        return d.target.y < d.source.y ? d.source.y - (d.source.size * 3.2): d.source.y + (d.source.size * 3.2) ;
                     } else {
                         return d.source.y;
                     }
@@ -61,7 +61,7 @@ const NetworkGraph = () => {
                 })
                 .attr('y2', d => {
                     if (d.type === 'Is Part Of') {
-                        return d.target.y - (d.target.size* 3.2) ;
+                        return d.source.y < d.target.y ? d.target.y - (d.target.size * 3.2): d.target.y + (d.target.size * 3.2) ;
                     } else {
                         return d.target.y;
                     }
