@@ -36,7 +36,9 @@ const NetworkGraph = () => {
     useEffect(() => {
         const svg = d3.select(svgRef.current);
 
+
         const ticked = () => {
+
             svg.selectAll('.link')
                 .attr('x1', d => {
                     if (d.type === 'Is Part Of') {
@@ -92,7 +94,10 @@ const NetworkGraph = () => {
         };
 
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id(d => d.id).distance(100))
+            .force('link', d3.forceLink(links).id(d => d.id).distance(100)) // Link force
+            .force('charge', d3.forceManyBody().strength(-200)) // Charge force to repel nodes
+            .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
+    
             .on('tick', ticked);
 
         const update = () => {
@@ -259,6 +264,10 @@ const NetworkGraph = () => {
                 .classed('clicked', d => d === selectedLinkId);
         }
 
+        return () => {
+            simulation.stop(); // Stop simulation on component unmount
+        };
+
     }, [nodes, links]);
 
     const handleCloseNode = () => {
@@ -332,6 +341,68 @@ const NetworkGraph = () => {
         }
     };
 
+    const handleFileUpload = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                parseCSV(text);
+            };
+            reader.readAsText(file);
+        }
+    };
+
+    const parseCSV = (data) => {
+        const parsedData = d3.csvParse(data);
+    
+        const nodeMap = new Map();
+        const newNodes = parsedData.map(d => {
+            const node = {
+                id: +d.ID,
+                name: d.name,
+                alternativeTitle: d['alternative title'],
+                targetURL: d['target URL'],
+                type: d.type,
+                isPartOf: d.isPartOf,
+                assesses: d.assesses,
+                comesAfter: d.comesAfter,
+                shape: 'Atomic ER',  // Default shape
+                size: 7,  // Default size
+                color: '#ADD8E6'  // Default color
+            };
+            nodeMap.set(node.id, node);
+            return node;
+        });
+    
+        const newLinks = [];
+        newNodes.forEach(node => {
+            if (node.isPartOf) {
+                const targetNode = nodeMap.get(+node.isPartOf);
+                if (targetNode) {
+                    newLinks.push({ source: node, target: targetNode, type: 'Is Part Of' });
+                }
+            }
+            if (node.assesses) {
+                const targetNode = nodeMap.get(+node.assesses);
+                if (targetNode) {
+                    newLinks.push({ source: node, target: targetNode, type: 'Assesses' });
+                }
+            }
+            if (node.comesAfter) {
+                const targetNode = nodeMap.get(+node.comesAfter);
+                if (targetNode) {
+                    newLinks.push({ source: node, target: targetNode, type: 'Comes After' });
+                }
+            }
+        });
+    
+        setNodes(newNodes);
+        setLinks(newLinks);
+    };
+    
+    
+    
     const handleAddLink = () => {
         setLinkingNode(selectedNode);
         setAnchorElNode(null);
@@ -357,6 +428,18 @@ const NetworkGraph = () => {
 
     return (
         <div>
+            <input
+    type="file"
+    accept=".csv"
+    onChange={handleFileUpload}
+    style={{ display: 'none' }}
+    id="csv-upload"
+/>
+<label htmlFor="csv-upload">
+    <Button variant="contained" component="span">
+        Upload CSV
+    </Button>
+</label>
             <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add Node</Button>
             <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button>
             <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px' , margin: '6px', width: '150px'}}>
@@ -415,6 +498,8 @@ const NetworkGraph = () => {
                     handleTypeChange={handleTypeChange}
                     handleRemoveLink={handleRemoveLink}
                     selectedLink={selectedLink}
+                    sourceNodeType = {selectedLink.source ? selectedLink.source.type : null}
+                  
                 />
             )}
         </div>

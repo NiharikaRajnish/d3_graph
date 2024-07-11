@@ -2,10 +2,18 @@ import React from 'react';
 import { Popover, MenuItem, Select, FormControl, InputLabel, Button } from '@mui/material';
 import { Remove } from '@mui/icons-material';
 
-const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemoveLink, selectedLink }) => {
+const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemoveLink, selectedLink, sourceNodeType }) => {
     const handleChange = (event) => {
         const newType = event.target.value;
         handleTypeChange(newType);
+    };
+
+    const getDefaultType = () => {
+        console.log(sourceNodeType)
+        if (sourceNodeType === 'Atomic ER') {
+            return 'Is Part Of';
+        }
+        return 'Comes After'; // Default type
     };
 
     return (
@@ -26,7 +34,7 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
             <FormControl style={{ margin: '8px' }}>
                 <InputLabel>Type</InputLabel>
                 <Select
-                   value={selectedLink && selectedLink.type ? selectedLink.type : 'Comes After'}
+                   value={selectedLink && selectedLink.type ? selectedLink.type :  getDefaultType()}
                    onChange={handleChange}
                     
                 >
