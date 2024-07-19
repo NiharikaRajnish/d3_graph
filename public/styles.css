@@ -14,6 +14,7 @@ text {
     pointer-events: none;
 }
 
+
 select, option {
     width: 250px;
 }
