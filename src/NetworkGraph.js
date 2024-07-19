@@ -6,13 +6,14 @@ import { Add, Remove, FilterList } from '@mui/icons-material';
 import NodePopover from './NodePopover'; // Adjust import path as per your project structure
 import LinkPopover from './LinkPopover'; // Adjust import path as per your project structure
 
-const width = 1500;
-const height = 600;
+const width = window.innerWidth * 0.9,
+    height = 600,
+    radius = 15;
 
 const NetworkGraph = () => {
     const initialNodes = [
-        { id: 1, name: 'start', shape: 'diamond', size: 10, color: 'green', fx: 100, fy: height / 2, fixed: true }, // Fixed position for start node
-        { id: 2, name: 'end', shape: 'diamond', size: 10, color: 'green', fx: width - 200, fy: height / 2, fixed: true } // Fixed position for end node
+        { id: 0, name: 'start', shape: 'diamond', size: 10, color: 'green', fx: 50, fy: height / 2, fixed: true, asseses: null, isPartOf: null, comesAfter: null }, // Fixed position for start node
+        { id: 54321, name: 'end', shape: 'diamond', size: 10, color: 'green', fx: width - 50, fy: height / 2, fixed: true, asseses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
     ];
     const initialLinks = [];
 
@@ -23,8 +24,9 @@ const NetworkGraph = () => {
     const [anchorElNode, setAnchorElNode] = useState(null);
     const [anchorElLink, setAnchorElLink] = useState(null);
     const [linkingNode, setLinkingNode] = useState(null);
+    // const [nodeMap, setNodeMap] = useState(new Map());
     const [linkingMessage, setLinkingMessage] = useState('');
-    const [filterType, setFilterType] = useState('');
+    const [filterType, setFilterType] = useState('All');
     const svgRef = useRef(null);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
     const linkingNodeRef = useRef(linkingNode);
@@ -34,40 +36,49 @@ const NetworkGraph = () => {
     }, [linkingNode]);
 
     useEffect(() => {
+        const newLinks = filterType ? processLinks(nodes.filter(n => !n.hidden)) : [];
+        setLinks(newLinks);
+    }, [nodes]);
+
+    const handleKeyDown = (event) => {
+        if ((event.key === 'Delete' || event.key === '-') && selectedNode) {
+            handleRemoveNode();
+        } else if ((event.key === 'Delete' || event.key === '-') && selectedLink) {
+            handleRemoveLink();
+        } else if (event.key === '+' && !selectedNode && !selectedLink) {
+            handleAddNode();
+        } else if (event.key === '+' && selectedNode && !selectedLink) {
+            handleAddLink();
+        }
+    };
+    useEffect(() => {
+
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [selectedNode, selectedLink]);
+
+    useEffect(() => {
         const svg = d3.select(svgRef.current);
-
-
         const ticked = () => {
 
+            svg.selectAll('.node')
+                .attr('transform', d => `translate(${d.x},${d.y})`)
+                .attr("cx", (d) => { return d.x = Math.max(radius, Math.min(svgRef.current.clientWidth - 100 - radius, d.x)); })
+                .attr("cy", (d) => { return d.y = Math.max(radius, Math.min(height - radius, d.y)); });
+
+            svg.selectAll('.nodeShape')
+                .attr('d', d => getShapePath(d.shape)) // Update node shape path
+                .attr('fill', d => d.color || color(d.type))
+                .attr('transform', d => `scale(${getNodeScale(d.size)})`);
+
             svg.selectAll('.link')
-                .attr('x1', d => {
-                    if (d.type === 'Is Part Of') {
-                        return d.source.x;
-                    } else {
-                        return d.source.x < d.target.x ? d.source.x + (d.source.size * 3.2) : d.source.x - (d.source.size * 3.2);
-                    }
-                })
-                .attr('y1', d => {
-                    if (d.type === 'Is Part Of') {
-                        return d.target.y < d.source.y ? d.source.y - (d.source.size * 3.2): d.source.y + (d.source.size * 3.2) ;
-                    } else {
-                        return d.source.y;
-                    }
-                })
-                .attr('x2', d => {
-                    if (d.type === 'Is Part Of') {
-                        return d.target.x;
-                    } else {
-                        return d.source.x < d.target.x ? d.target.x - (d.target.size * 3.2) : d.target.x + (d.target.size * 3.2);
-                    }
-                })
-                .attr('y2', d => {
-                    if (d.type === 'Is Part Of') {
-                        return d.source.y < d.target.y ? d.target.y - (d.target.size * 3.2): d.target.y + (d.target.size * 3.2) ;
-                    } else {
-                        return d.target.y;
-                    }
-                })
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y)
                 .attr('stroke', d => {
                     switch (d.type) {
                         case 'Assesses':
@@ -77,32 +88,25 @@ const NetworkGraph = () => {
                         case 'Is Part Of':
                             return 'grey';
                         default:
-                            return '#df0d0d'; 
+                            return '#df0d0d';
                     }
-                });
-
-            svg.selectAll('.node')
-                .attr('transform', d => `translate(${d.x},${d.y})`);
-
-            svg.selectAll('.nodeShape')
-                .attr('d', d => getShapePath(d.shape)) // Update node shape path
-                .attr('fill', d => d.color || color(d.type))
-                .attr('transform', d => `scale(${getNodeScale(d.size)})`);
-
+                })
+                .lower(); // Move links below node shapes
             svg.selectAll('.node text')
-                .text(d => d.name); // Update node's label text
+                .text(d => d.name) // Update node's label text
+                .attr('style', 'font-weight: bold; font-size: 8px;')
         };
 
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id(d => d.id).distance(100)) // Link force
-            .force('charge', d3.forceManyBody().strength(-200)) // Charge force to repel nodes
+            .force('link', d3.forceLink(links).id(d => d.id).distance(125)) // Link force
+            .force('charge', d3.forceManyBody().strength(-1000).distanceMax(150).distanceMin(1)) // Charge force to repel nodes
             .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
-    
             .on('tick', ticked);
 
         const update = () => {
             const link = svg.selectAll('.link')
-                .data(links, d => `${d.source.id}-${d.target.id}`);
+                .data(links, d => `${d.source.id}-${d.target.id}`)
+            // .data(links.filter(l => !l.hidden), d => `${d.source.id}-${d.target.id}`);
 
             link.exit().remove();
 
@@ -150,7 +154,8 @@ const NetworkGraph = () => {
                 .attr('font-weight', 'bold')
                 .attr('dy', '.35em') // Adjust vertical alignment relative to font size
                 .attr('font-size', d => getNodeSize(d.size) / 2) // Dynamically set font size based on node size
-                .text(d => d.name);
+                .text(d => d.name)
+                .on('click', nodeClicked);
 
             node.merge(nodeEnter)
                 .attr('transform', d => `translate(${d.fx},${d.fy})`)
@@ -195,9 +200,12 @@ const NetworkGraph = () => {
                     (link.source.id === currentLinkingNode.id && link.target.id === d.id) ||
                     (link.source.id === d.id && link.target.id === currentLinkingNode.id)
                 );
-
+                const cLN = nodes.find(n => n.id === currentLinkingNode.id)
                 if (!existingLink) {
-                    setLinks(prevLinks => [...prevLinks, { source: currentLinkingNode, target: d }]);
+                    currentLinkingNode.comesAfter = d.id;
+                    cLN && (cLN.comesAfter = d.id);
+                    !cLN ? setNodes([...nodes, currentLinkingNode]) : setNodes([...nodes]);
+                    // setLinks(prevLinks => [...prevLinks, { source: currentLinkingNode, target: d, type: 'Comes After' }]);
                 }
 
                 setLinkingNode(null);
@@ -251,31 +259,24 @@ const NetworkGraph = () => {
             return Math.sqrt(size) * 2;
         }
 
-        function updateNodeBorders(selectedNodeId) {
-            d3.select(svgRef.current).selectAll('.nodeShape')
-                .attr('stroke', d => (d.id === selectedNodeId ? 'black' : 'none'))
-                .attr('stroke-width', d => (d.id === selectedNodeId ? 0.5 : 0));
-        }
-
-        function updateLinkBorders(selectedLinkId) {
-            d3.select(svgRef.current).selectAll('.link')
-                .attr('stroke', d => (d === selectedLinkId ? 'black' : '#df0d0d'))
-                .attr('stroke-width', d => (d === selectedLinkId ? 5 : 3))
-                .classed('clicked', d => d === selectedLinkId);
-        }
-
         return () => {
             simulation.stop(); // Stop simulation on component unmount
         };
 
-    }, [nodes, links]);
+    }, [links]);
 
     const handleCloseNode = () => {
+        setSelectedNode(null);
         setAnchorElNode(null);
+        updateNodeBorders(null);
         setLinkingMessage('');
     };
     const handleCloseLink = () => {
+        d3.selectAll('.link.clicked').classed('clicked', false);
+        setSelectedLink(null);
         setAnchorElLink(null);
+        updateLinkBorders(null);
+        updateNodeBorders(null);
         setLinkingMessage('');
     };
 
@@ -299,6 +300,7 @@ const NetworkGraph = () => {
                     selectedNode.color = color('default');
             }
             setNodes([...nodes]); // Trigger re-render to update node shape and color
+            // setLinks([...links]);
         }
     };
 
@@ -311,7 +313,18 @@ const NetworkGraph = () => {
     const handleTypeChange = (newType) => {
         if (selectedLink) {
             selectedLink.type = newType;
-            setLinks([...links]); // Trigger re-render to update link type
+            switch (newType) {
+                case 'Assesses':
+                    nodes.find(n => n.id === selectedLink.source.id).assess = selectedLink.target.id;
+                    break;
+                case 'Comes After':
+                    nodes.find(n => n.id === selectedLink.source.id).comesAfter = selectedLink.target.id;
+                    break;
+                case 'Is Part Of':
+                    nodes.find(n => n.id === selectedLink.source.id).isPartOf = selectedLink.target.id;
+                    break;
+            }
+            setNodes([...nodes]); // Trigger re-render to update link type
         }
     };
 
@@ -319,14 +332,17 @@ const NetworkGraph = () => {
         if (selectedNode) {
             selectedNode.name = newName;
             setNodes([...nodes]); // Trigger re-render to update node name
+            // setLinks([...links]);
         }
     };
 
     const handleAddNode = () => {
         const id = nodes.length ? nodes[nodes.length - 1].id + 1 : 1;
         const name = `Node ${id}`;
-        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2 };
+        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, asseses: null, isPartOf: null, comesAfter: null };
         setNodes([...nodes, newNode]);
+        // setLinks([...links]);
+
     };
 
     const handleRemoveNode = () => {
@@ -354,55 +370,76 @@ const NetworkGraph = () => {
     };
 
     const parseCSV = (data) => {
-        const parsedData = d3.csvParse(data);
-    
-        const nodeMap = new Map();
-        const newNodes = parsedData.map(d => {
+        // const tmpNodeMap = new Map();
+        const parsedData = d3.csvParse(data, ({ identifier, title, description, url, type, isPartOf, isFormatOf, assesses, comesAfter }) => {
             const node = {
-                id: +d.ID,
-                name: d.name,
-                alternativeTitle: d['alternative title'],
-                targetURL: d['target URL'],
-                type: d.type,
-                isPartOf: d.isPartOf,
-                assesses: d.assesses,
-                comesAfter: d.comesAfter,
-                shape: 'Atomic ER',  // Default shape
-                size: 7,  // Default size
-                color: '#ADD8E6'  // Default color
+                id: +identifier,
+                name: title,
+                description,
+                url,
+                type,
+                size: 7,
+                isPartOf: isPartOf ? +isPartOf : null,
+                isFormatOf: +isFormatOf,
+                assesses: assesses ? +assesses : null,
+                comesAfter: comesAfter ? +comesAfter : null,
+                shape: type in { 'Atomic ER': 1, 'aER': 1, 'iER': 1, 'rER': 1 } ? type : 'Atomic ER',
+            }
+            // tmpNodeMap.set(node.id, node);
+            return node
+        })
+
+        const filteredNodes = parsedData.filter(node => node.comesAfter && !node.assesses && !node.isPartOf);
+        const maxIdNode = filteredNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, filteredNodes[0]);
+        // const minIdNode = filteredNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, filteredNodes[0]);
+        const tmpNodes = nodes.map(node => {
+            if (node.id === 54321) {
+                const updEnd = {
+                    ...node,
+                    comesAfter: maxIdNode.id
+                }
+                // tmpNodeMap.set(updEnd.id, updEnd);
+                parsedData.push(updEnd);
+            }
+            else {
+                // tmpNodeMap.set(node.id, node);
+                parsedData.push(node)
             };
-            nodeMap.set(node.id, node);
-            return node;
-        });
-    
+            return node
+
+        })
+
+        // setNodeMap(tmpNodeMap);
+        // const newLinks = processLinks(parsedData);
+        setNodes(parsedData);
+        // setLinks(newLinks);
+    };
+
+    const processLinks = (parsedData) => {
         const newLinks = [];
-        newNodes.forEach(node => {
-            if (node.isPartOf) {
-                const targetNode = nodeMap.get(+node.isPartOf);
+        parsedData.forEach(node => {
+            if (typeof node.isPartOf == 'number') {
+                const targetNode = parsedData.find(n => n.id === node.isPartOf);
                 if (targetNode) {
                     newLinks.push({ source: node, target: targetNode, type: 'Is Part Of' });
                 }
             }
-            if (node.assesses) {
-                const targetNode = nodeMap.get(+node.assesses);
+            if (typeof node.assesses == 'number') {
+                const targetNode = parsedData.find(n => n.id === node.assesses);
                 if (targetNode) {
                     newLinks.push({ source: node, target: targetNode, type: 'Assesses' });
                 }
             }
-            if (node.comesAfter) {
-                const targetNode = nodeMap.get(+node.comesAfter);
+            if (typeof node.comesAfter == 'number') {
+                const targetNode = parsedData.find(n => n.id === node.comesAfter);
                 if (targetNode) {
                     newLinks.push({ source: node, target: targetNode, type: 'Comes After' });
                 }
             }
         });
-    
-        setNodes(newNodes);
-        setLinks(newLinks);
+        return newLinks;
     };
-    
-    
-    
+
     const handleAddLink = () => {
         setLinkingNode(selectedNode);
         setAnchorElNode(null);
@@ -422,44 +459,60 @@ const NetworkGraph = () => {
     const handleFilterNodes = (filterType) => {
         setNodes(nodes.map(node => ({
             ...node,
-            hidden: (node.id === 1 || node.id === 2) ? false : (filterType ? node.shape !== filterType : false)
+            hidden: (filterType === 'All' || node.id === 0 || node.id === 54321) ? false : (node.shape !== filterType)
         })));
+        // const newLinks = filterType ? processLinks(nodes.filter(n => !n.hidden)) : [];
+        // setLinks(newLinks);
     };
+
+    const updateNodeBorders = (selectedNodeId) => {
+        d3.select(svgRef.current).selectAll('.nodeShape')
+            .attr('stroke', d => (d.id === selectedNodeId ? 'black' : 'none'))
+            .attr('stroke-width', d => (d.id === selectedNodeId ? 0.5 : 0));
+    }
+
+    const updateLinkBorders = (selectedLinkId) => {
+        d3.select(svgRef.current).selectAll('.link')
+            .attr('stroke', d => (d === selectedLinkId ? 'black' : '#df0d0d'))
+            .attr('stroke-width', d => (d === selectedLinkId ? 5 : 3))
+            .classed('clicked', d => d === selectedLinkId);
+    }
 
     return (
         <div>
             <input
-    type="file"
-    accept=".csv"
-    onChange={handleFileUpload}
-    style={{ display: 'none' }}
-    id="csv-upload"
-/>
-<label htmlFor="csv-upload">
-    <Button variant="contained" component="span">
-        Upload CSV
-    </Button>
-</label>
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+                id="csv-upload"
+            />
+            <label htmlFor="csv-upload">
+                <Button variant="contained" component="span">
+                    Upload CSV
+                </Button>
+            </label>
             <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add Node</Button>
             <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button>
-            <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px' , margin: '6px', width: '150px'}}>
-            <InputLabel>Filter Nodes</InputLabel>
-            <Select
-            value={filterType}
-            onChange={(e) => {
-            setFilterType(e.target.value);
-            handleFilterNodes(e.target.value);
-        }}
-            label="Filter Nodes"
-            >
-            <MenuItem value=""><em>None</em></MenuItem>
-            <MenuItem value="Atomic ER">Atomic ER</MenuItem> 
-            <MenuItem value="aER">aER</MenuItem>
-            <MenuItem value="iER">iER</MenuItem>
-            <MenuItem value="rER">rER</MenuItem>
-            </Select>
+            <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
+                <InputLabel>Filter Nodes</InputLabel>
+                <Select
+                    value={filterType}
+                    onChange={(e) => {
+                        setFilterType(e.target.value);
+                        handleFilterNodes(e.target.value);
+                    }}
+                    label="Filter Nodes"
+                >
+                    <MenuItem value=""><em>None</em></MenuItem>
+                    <MenuItem value="All"><em>All</em></MenuItem>
+                    <MenuItem value="Atomic ER">Atomic ER</MenuItem>
+                    <MenuItem value="aER">aER</MenuItem>
+                    <MenuItem value="iER">iER</MenuItem>
+                    <MenuItem value="rER">rER</MenuItem>
+                </Select>
             </FormControl>
-            <svg ref={svgRef} width={width} height={height}></svg>
+            <svg ref={svgRef} width='100%' height='80vh' viewBox={`0 0 ${width} ${height}`}></svg>
             {linkingMessage && (
                 <Typography
                     variant="body1"
@@ -498,8 +551,8 @@ const NetworkGraph = () => {
                     handleTypeChange={handleTypeChange}
                     handleRemoveLink={handleRemoveLink}
                     selectedLink={selectedLink}
-                    sourceNodeType = {selectedLink.source ? selectedLink.source.type : null}
-                  
+                    sourceNodeType={selectedLink.source ? selectedLink.source.type : null}
+
                 />
             )}
         </div>
