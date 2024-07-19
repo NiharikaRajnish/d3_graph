@@ -26,7 +26,7 @@ const NetworkGraph = () => {
     const [linkingNode, setLinkingNode] = useState(null);
     // const [nodeMap, setNodeMap] = useState(new Map());
     const [linkingMessage, setLinkingMessage] = useState('');
-    const [filterType, setFilterType] = useState('All');
+    const [filterType, setFilterType] = useState('3');
     const [hoveredNode, setHoveredNode] = useState(null);
     const svgRef = useRef(null);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -93,103 +93,100 @@ const NetworkGraph = () => {
                     }
                 })
                 .lower(); // Move links below node shapes
-            svg.selectAll('.node text')
+            svg.selectAll('.nodeLabel')
                 .text(d => d.name) // Update node's label text
                 .attr('style', 'font-weight: bold; font-size: 8px;')
         };
 
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(125).strength(0)) // Link force
-            .force('charge', d3.forceManyBody().strength(-1000).distanceMax(150).distanceMin(1)) // Charge force to repel nodes
+            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(110)) // Link force
+            .force('charge', d3.forceManyBody().strength(-1000).distanceMax(175).distanceMin(1)) // Charge force to repel nodes
             .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
-            .on('tick', ticked);
+            .on('tick', ticked)
 
-        const update = () => {
-            const link = svg.selectAll('.link')
-                .data(links, d => `${d.source.id}-${d.target.id}`)
-            // .data(links.filter(l => !l.hidden), d => `${d.source.id}-${d.target.id}`);
+        const link = svg.selectAll('.link')
+            .data(links, d => `${d.source.id}-${d.target.id}`)
+        // .data(links.filter(l => !l.hidden), d => `${d.source.id}-${d.target.id}`);
 
-            link.exit().remove();
+        link.exit().remove();
 
-            const linkEnter = link.enter().append('line')
-                .attr('class', 'link')
-                .on('click', linkClicked) // Add click handler for links
-                .merge(link)
-                .attr('stroke', d => {
-                    switch (d.type) {
-                        case 'Assesses':
-                            return 'lightblue';
-                        case 'Comes After':
-                            return 'red';
-                        case 'Is Part Of':
-                            return 'grey';
-                        default:
-                            return '#df0d0d'; // Default color for unrecognized types
-                    }
-                });
-
-            const node = svg.selectAll('.node')
-                .data(nodes.filter(n => !n.hidden), d => d.id);
-
-            node.exit().remove();
-
-            const nodeEnter = node.enter().append('g')
-                .attr('class', 'node')
-                .call(d3.drag()
-                    .filter(d => !d.fx && !d.fy)
-                    .on('start', dragStarted)
-                    .on('drag', dragged)
-                    .on('end', dragEnded))
-                .on('click', nodeClicked);
-
-            nodeEnter.append('path')
-                .attr('class', 'nodeShape')
-                .attr('d', d => getShapePath(d.shape))
-                .attr('fill', d => d.color || color(d.type))
-                // .attr('transform', d => `scale(${getNodeScale(d.size)})`)
-                .attr('stroke', 'none') // Initialize stroke to none
-                .attr('stroke-width', 0) // Initialize stroke width to 0
-                .on('mouseover', handleNodeHover); // Attach mouseover event handler
-
-            nodeEnter.append('text')
-                .attr('text-anchor', 'middle') // Center align text horizontally
-                .attr('font-weight', 'bold')
-                .attr('dy', '.35em') // Adjust vertical alignment relative to font size
-                .attr('font-size', d => getNodeSize(d.size) / 2) // Dynamically set font size based on node size
-                .text(d => d.name)
-                .on('click', nodeClicked);
-
-            nodeEnter.append('text')
-                .attr('class', 'nodeTypeLabel') // Add a class for styling
-                .attr('text-anchor', 'middle')
-                .attr('dy', '-4em') // Adjust position above the node
-                .attr('font-weight', 'bold')
-                .attr('font-size', '12px')
-                .style('pointer-events', 'none') // Avoid capturing events on text
-                .style('opacity', 0); // Initially hide text
-
-            // Transition to show text on mouseover
-            nodeEnter.on('mouseover', (event, d) => {
-                d3.select(event.currentTarget).select('.nodeTypeLabel')
-                    .text(d.shape) // Set the text content to d.shape
-                    .style('opacity', 1); // Make the label visible
-            }).on('mouseout', (event, d) => {
-                d3.select(event.currentTarget).select('.nodeTypeLabel')
-                    .style('opacity', 0); // Hide the label on mouseout
+        const linkEnter = link.enter().append('line')
+            .attr('class', 'link')
+            .on('click', linkClicked) // Add click handler for links
+            .merge(link)
+            .attr('stroke', d => {
+                switch (d.type) {
+                    case 'Assesses':
+                        return 'lightblue';
+                    case 'Comes After':
+                        return 'red';
+                    case 'Is Part Of':
+                        return 'grey';
+                    default:
+                        return '#df0d0d'; // Default color for unrecognized types
+                }
             });
 
+        const node = svg.selectAll('.node')
+            .data(nodes.filter(n => !n.hidden), d => d.id);
 
-            node.merge(nodeEnter)
-                .attr('transform', d => `translate(${d.fx},${d.fy})`)
 
-            simulation.nodes(nodes);
-            simulation.force('link').links(links);
-            simulation.alpha(0.3).restart(); // Use a lower alpha value to minimize layout disruptions
+        node.exit().remove();
 
-            updateNodeBorders(selectedNode ? selectedNode.id : null); // Update node borders initially
-        };
+        const nodeEnter = node.enter().append('g')
+            .merge(node)
+            .attr('class', 'node')
+            .call(d3.drag()
+                .on('start', dragStarted)
+                .on('drag', dragged)
+                .on('end', dragEnded))
+            .on('click', nodeClicked);
 
-        update();
+
+        nodeEnter.append('path')
+            .attr('class', 'nodeShape')
+            .attr('d', d => getShapePath(d.shape))
+            .attr('fill', d => d.color || color(d.type))
+            // .attr('transform', d => `scale(${getNodeScale(d.size)})`)
+            .attr('stroke', 'none') // Initialize stroke to none
+            .attr('stroke-width', 0) // Initialize stroke width to 0
+        // .on('mouseover', handleNodeHover); // Attach mouseover event handler
+
+        nodeEnter.append('text')
+            .attr('class', 'nodeLabel') // Add a class for styling
+            .attr('text-anchor', 'middle') // Center align text horizontally
+            .attr('font-weight', 'bold')
+            .attr('dy', '.35em') // Adjust vertical alignment relative to font size
+            .attr('font-size', d => getNodeSize(d.size) / 2) // Dynamically set font size based on node size
+            .text(d => d.name)
+
+        nodeEnter.append('text')
+            .attr('class', 'nodeTypeLabel') // Add a class for styling
+            .attr('text-anchor', 'middle')
+            .attr('dy', '-3.5em') // Adjust position above the node
+            // .attr('font-weight', 'bold')
+            // .attr('font-size', '12px')
+            .style('pointer-events', 'none') // Avoid capturing events on text
+            .attr('style', 'opacity: 0;')
+        // Transition to show text on mouseover
+        nodeEnter.on('mouseover', (event, d) => {
+            d3.select(event.currentTarget).select('.nodeTypeLabel')
+                .text(d.shape) // Set the text content to d.shape
+                .style('opacity', 1); // Make the label visible
+        }).on('mouseout', (event, d) => {
+            d3.select(event.currentTarget).select('.nodeTypeLabel')
+                .style('opacity', 0); // Hide the label on mouseout
+        });
+
+
+        node.merge(nodeEnter)
+            .attr('transform', d => `translate(${d.fx},${d.fy})`)
+
+        // simulation.nodes(nodes);
+        // simulation.force('link').links(links);
+        simulation.alpha(0.3).restart(); // Use a lower alpha value to minimize layout disruptions
+
+        updateNodeBorders(selectedNode ? selectedNode.id : null); // Update node borders initially
 
         function dragStarted(event, d) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -214,34 +211,6 @@ const NetworkGraph = () => {
             }
         }
 
-        function nodeClicked(event, d) {
-            const currentLinkingNode = linkingNodeRef.current;
-
-            if (currentLinkingNode && currentLinkingNode.id !== d.id) {
-                const existingLink = links.find(link =>
-                    (link.source.id === currentLinkingNode.id && link.target.id === d.id) ||
-                    (link.source.id === d.id && link.target.id === currentLinkingNode.id)
-                );
-                const cLN = nodes.find(n => n.id === currentLinkingNode.id)
-                if (!existingLink) {
-                    currentLinkingNode.comesAfter = d.id;
-                    cLN && (cLN.comesAfter = d.id);
-                    !cLN ? setNodes([...nodes, currentLinkingNode]) : setNodes([...nodes]);
-                    // setLinks(prevLinks => [...prevLinks, { source: currentLinkingNode, target: d, type: 'Comes After' }]);
-                }
-
-                setLinkingNode(null);
-                setLinkingMessage('');
-            } else {
-                setSelectedNode(d);
-                setSelectedLink(null); // Deselect link if a node is clicked
-                setAnchorElNode(event.currentTarget); // Set anchor for node popover
-                updateNodeBorders(d.id); // Add this line to update node borders
-
-                // Deselect any previously clicked link
-                d3.selectAll('.link.clicked').classed('clicked', false);
-            }
-        }
 
         function linkClicked(event, d) {
             setSelectedLink(d);
@@ -282,6 +251,8 @@ const NetworkGraph = () => {
         }
 
         return () => {
+            node.remove();
+            link.remove();
             simulation.stop(); // Stop simulation on component unmount
         };
 
@@ -359,6 +330,7 @@ const NetworkGraph = () => {
     };
 
     const handleAddNode = () => {
+        const maxIdNode = nodes.reduce((maxNode, node) => ((node.id > maxNode.id) && (node.id !== 53421)) ? node : maxNode, nodes[0]);
         const id = nodes.length ? nodes[nodes.length - 1].id + 1 : 1;
         const name = `Node ${id}`;
         const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, asseses: null, isPartOf: null, comesAfter: null };
@@ -379,6 +351,66 @@ const NetworkGraph = () => {
         }
     };
 
+    function nodeClicked(event, d) {
+        const currLN = linkingNodeRef.current;
+
+        if (currLN && currLN.id !== d.id) {
+            const existingLink = links.find(link =>
+                (link.source.id === currLN.id && link.target.id === d.id) ||
+                (link.source.id === d.id && link.target.id === currLN.id)
+            );
+            // const cLN = nodes.find(n => n.id === currentLinkingNode.id)
+            if (!existingLink) {
+                if (currLN.shape === 'Atomic ER' && (d.shape === 'diamond' || d.shape === 'Atomic ER')) {
+                    currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
+                } else if (currLN.shape === 'Atomic ER' && d.shape === 'iER') {
+                    currLN.isPartOf = d.id
+                } else if (currLN.shape === 'Atomic ER' && d.shape === 'aER') {
+                    currLN.isPartOf = d.id
+                } else if (currLN.shape === 'Atomic ER' && d.shape === 'rER') {
+                    setLinkingMessage('Atomic ER cannot link with rER');
+                    setTimeout(() => setLinkingMessage(''), 2000);
+                } else if (currLN.shape === 'diamond' && d.shape === 'Atomic ER') {
+                    currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
+                } else if (currLN.shape === 'iER' && d.shape === 'Atomic ER') {
+                    d.isPartOf = currLN.id
+                } else if (currLN.shape === 'iER' && d.shape === 'aER') {
+                    d.isPartOf = currLN.id
+                } else if (currLN.shape === 'iER' && d.shape === 'rER') {
+                    setLinkingMessage('iER cannot link with rER');
+                    setTimeout(() => setLinkingMessage(''), 2000);
+                } else if (currLN.shape === 'iER' && d.shape === 'diamond') {
+                    currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
+                } else if (currLN.shape === 'aER' && d.shape === 'iER') {
+                    currLN.isPartOf = d.id
+                } else if (currLN.shape === 'aER' && d.shape === 'rER') {
+                    d.asseses = currLN.id
+                } else if (currLN.shape === 'rER' && d.shape === 'aER') {
+                    currLN.asseses = d.id
+                } else if (currLN.shape === 'rER' && d.shape !== 'aER') {
+                    setLinkingMessage('Only aER can be linked with rER');
+                    setTimeout(() => setLinkingMessage(''), 2000);
+                } else {
+                    setLinkingMessage('Linking between selected nodes is not allowed');
+                    setTimeout(() => setLinkingMessage(''), 2000);
+                }
+
+                setNodes([...nodes]);
+                // setLinks(prevLinks => [...prevLinks, { source: currentLinkingNode, target: d, type: 'Comes After' }]);
+            }
+
+            setLinkingNode(null);
+            setLinkingMessage('');
+        } else {
+            setSelectedNode(d);
+            setSelectedLink(null); // Deselect link if a node is clicked
+            setAnchorElNode(event.currentTarget); // Set anchor for node popover
+            updateNodeBorders(d.id); // Add this line to update node borders
+
+            // Deselect any previously clicked link
+            d3.selectAll('.link.clicked').classed('clicked', false);
+        }
+    }
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (file) {
@@ -410,7 +442,15 @@ const NetworkGraph = () => {
             // tmpNodeMap.set(node.id, node);
             return node
         })
-
+        const countIERNodes = parsedData.filter(node => node.shape === 'iER').length;
+        let cnt = 0;
+        parsedData.forEach((node, index) => {
+            if (node.shape === 'iER') {
+                cnt++;
+                node.fy = height / 2;
+                node.x = (cnt * (width / countIERNodes)) - radius;
+            }
+        });
         const filteredNodes = parsedData.filter(node => node.comesAfter && !node.assesses && !node.isPartOf);
         const maxIdNode = filteredNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, filteredNodes[0]);
         // const minIdNode = filteredNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, filteredNodes[0]);
@@ -509,6 +549,7 @@ const NetworkGraph = () => {
                 hidden
             };
         });
+        setNodes([...updatedNodes]);
         // const newLinks = filterType ? processLinks(nodes.filter(n => !n.hidden)) : [];
         // setLinks(newLinks);
         // handleFilterLinks(filterType);
