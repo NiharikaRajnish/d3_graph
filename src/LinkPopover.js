@@ -31,7 +31,7 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
                 horizontal: 'center',
             }}
         >
-            <FormControl style={{ margin: '8px' }}>
+            <FormControl style={{ margin: '8px' , width: '150px'}}>
                 <InputLabel>Type</InputLabel>
                 <Select
                    value={selectedLink && selectedLink.type ? selectedLink.type :  getDefaultType()}
@@ -47,7 +47,8 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
                 onClick={handleRemoveLink}
                 startIcon={<Remove />}
                 variant="outlined"
-                style={{ margin: '8px' }}
+                style={{ margin: '8px' , width: '100px' }}
+            
             >
                 Remove Link
             </Button>

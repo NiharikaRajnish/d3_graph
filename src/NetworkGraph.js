@@ -27,6 +27,7 @@ const NetworkGraph = () => {
     // const [nodeMap, setNodeMap] = useState(new Map());
     const [linkingMessage, setLinkingMessage] = useState('');
     const [filterType, setFilterType] = useState('All');
+    const [hoveredNode, setHoveredNode] = useState(null);
     const svgRef = useRef(null);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
     const linkingNodeRef = useRef(linkingNode);
@@ -98,7 +99,7 @@ const NetworkGraph = () => {
         };
 
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id(d => d.id).distance(125)) // Link force
+            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(125).strength(0)) // Link force
             .force('charge', d3.forceManyBody().strength(-1000).distanceMax(150).distanceMin(1)) // Charge force to repel nodes
             .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
             .on('tick', ticked);
@@ -147,7 +148,8 @@ const NetworkGraph = () => {
                 .attr('fill', d => d.color || color(d.type))
                 // .attr('transform', d => `scale(${getNodeScale(d.size)})`)
                 .attr('stroke', 'none') // Initialize stroke to none
-                .attr('stroke-width', 0); // Initialize stroke width to 0
+                .attr('stroke-width', 0) // Initialize stroke width to 0
+                .on('mouseover', handleNodeHover); // Attach mouseover event handler
 
             nodeEnter.append('text')
                 .attr('text-anchor', 'middle') // Center align text horizontally
@@ -157,12 +159,32 @@ const NetworkGraph = () => {
                 .text(d => d.name)
                 .on('click', nodeClicked);
 
+            nodeEnter.append('text')
+                .attr('class', 'nodeTypeLabel') // Add a class for styling
+                .attr('text-anchor', 'middle')
+                .attr('dy', '-4em') // Adjust position above the node
+                .attr('font-weight', 'bold')
+                .attr('font-size', '12px')
+                .style('pointer-events', 'none') // Avoid capturing events on text
+                .style('opacity', 0); // Initially hide text
+
+            // Transition to show text on mouseover
+            nodeEnter.on('mouseover', (event, d) => {
+                d3.select(event.currentTarget).select('.nodeTypeLabel')
+                    .text(d.shape) // Set the text content to d.shape
+                    .style('opacity', 1); // Make the label visible
+            }).on('mouseout', (event, d) => {
+                d3.select(event.currentTarget).select('.nodeTypeLabel')
+                    .style('opacity', 0); // Hide the label on mouseout
+            });
+
+
             node.merge(nodeEnter)
                 .attr('transform', d => `translate(${d.fx},${d.fy})`)
 
             simulation.nodes(nodes);
             simulation.force('link').links(links);
-            simulation.alpha(1).restart();
+            simulation.alpha(0.3).restart(); // Use a lower alpha value to minimize layout disruptions
 
             updateNodeBorders(selectedNode ? selectedNode.id : null); // Update node borders initially
         };
@@ -457,12 +479,80 @@ const NetworkGraph = () => {
     };
 
     const handleFilterNodes = (filterType) => {
-        setNodes(nodes.map(node => ({
-            ...node,
-            hidden: (filterType === 'All' || node.id === 0 || node.id === 54321) ? false : (node.shape !== filterType)
-        })));
+        // Update nodes with hidden property based on filterType
+        const updatedNodes = nodes.map(node => {
+            let hidden = false;
+
+            if (node.id === 0 || node.id === 54321) {
+                hidden = false; // Always show nodes with id 1 and 2
+            } else {
+                switch (filterType) {
+                    case "1":
+                        hidden = !(node.shape === 'aER' || node.shape === 'rER');
+                        break;
+                    case "2":
+                        hidden = node.shape == 'Atomic ER';
+                        break;
+                    case "3":
+                        hidden = false; // Show all nodes
+                        break;
+                    case "4":
+                        // Implement your logic for View 4
+                        break;
+                    default:
+                        hidden = false;
+                }
+            }
+
+            return {
+                ...node,
+                hidden
+            };
+        });
         // const newLinks = filterType ? processLinks(nodes.filter(n => !n.hidden)) : [];
         // setLinks(newLinks);
+        // handleFilterLinks(filterType);
+
+    };
+
+    const handleFilterLinks = (filterType) => {
+        const updatedLinks = links.map(link => {
+            let hidden = false;
+
+            switch (filterType) {
+                case "1":
+                    hidden = (link.source.shape === 'iER' || link.source.shape === 'Atomic ER' || link.target.shape === 'Atomic ER' || link.target.shape === 'iER');
+                    break;
+                case "2":
+                    hidden = (link.source.shape === 'Atomic ER' || link.target.shape === 'Atomic ER');
+                    break;
+                case "3":
+                    hidden = false; // Show all links
+                    break;
+                case "4":
+                    // Implement your logic for View 4
+                    break;
+                default:
+                    hidden = false;
+            }
+
+            return {
+                ...link,
+                hidden
+            };
+        });
+
+        setLinks(updatedLinks); // Update state for links
+    };
+
+    const handleNodeHover = (event, d) => {
+        // Set the hovered node in state
+        setHoveredNode(d);
+    };
+
+    const handleNodeMouseOut = () => {
+        // Clear the hovered node state
+        setHoveredNode(null);
     };
 
     const updateNodeBorders = (selectedNodeId) => {
@@ -495,21 +585,19 @@ const NetworkGraph = () => {
             <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add Node</Button>
             <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button>
             <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
-                <InputLabel>Filter Nodes</InputLabel>
+                <InputLabel>Views</InputLabel>
                 <Select
                     value={filterType}
                     onChange={(e) => {
                         setFilterType(e.target.value);
                         handleFilterNodes(e.target.value);
                     }}
-                    label="Filter Nodes"
+                    label="View"
                 >
-                    <MenuItem value=""><em>None</em></MenuItem>
-                    <MenuItem value="All"><em>All</em></MenuItem>
-                    <MenuItem value="Atomic ER">Atomic ER</MenuItem>
-                    <MenuItem value="aER">aER</MenuItem>
-                    <MenuItem value="iER">iER</MenuItem>
-                    <MenuItem value="rER">rER</MenuItem>
+                    <MenuItem value="1">View 1: Summative assessment only</MenuItem>
+                    <MenuItem value="2">View 2: Course Overview</MenuItem>
+                    <MenuItem value="3">View 3: All ERs</MenuItem>
+                    <MenuItem value="4">View 4: Requirements</MenuItem>
                 </Select>
             </FormControl>
             <svg ref={svgRef} width='100%' height='80vh' viewBox={`0 0 ${width} ${height}`}></svg>
