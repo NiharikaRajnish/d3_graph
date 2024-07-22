@@ -258,16 +258,17 @@ const NetworkGraph = () => {
 
     }, [links]);
 
+
     const handleCloseNode = () => {
         setSelectedNode(null);
-        setAnchorElNode(null);
+        setAnchorElNode(false);
         updateNodeBorders(null);
         setLinkingMessage('');
     };
     const handleCloseLink = () => {
         d3.selectAll('.link.clicked').classed('clicked', false);
         setSelectedLink(null);
-        setAnchorElLink(null);
+        setAnchorElLink(false);
         updateLinkBorders(null);
         updateNodeBorders(null);
         setLinkingMessage('');
@@ -301,6 +302,7 @@ const NetworkGraph = () => {
         if (selectedNode) {
             selectedNode.size = newSize;
             setNodes([...nodes]); // Trigger re-render to update node size
+            setAnchorElNode(selectedNode)
         }
     };
     const handleTypeChange = (newType) => {
@@ -404,7 +406,7 @@ const NetworkGraph = () => {
         } else {
             setSelectedNode(d);
             setSelectedLink(null); // Deselect link if a node is clicked
-            setAnchorElNode(event.currentTarget); // Set anchor for node popover
+            setAnchorElNode(d); // Set anchor for node popover
             updateNodeBorders(d.id); // Add this line to update node borders
 
             // Deselect any previously clicked link
@@ -504,7 +506,7 @@ const NetworkGraph = () => {
 
     const handleAddLink = () => {
         setLinkingNode(selectedNode);
-        setAnchorElNode(null);
+        setAnchorElNode(false);
         setLinkingMessage('Click another node to establish a link');
     };
 
@@ -659,6 +661,7 @@ const NetworkGraph = () => {
                 </Typography>
             )}
             {selectedNode && (
+                 console.log(anchorElNode),
                 <NodePopover
                     id="node-popover"
                     open={Boolean(anchorElNode)}
