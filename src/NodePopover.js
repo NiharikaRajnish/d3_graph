@@ -4,6 +4,7 @@ import { Link as LinkIcon } from '@mui/icons-material';
 
 const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode, handleShapeChange, handleSizeChange, handleRenameNode }) => {
     const [newName, setNewName] = useState(selectedNode?.name || '');
+    
 
     const handleChangeName = (event) => {
         setNewName(event.target.value);
@@ -42,7 +43,7 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
                 style: {
                     width: 'auto',
                     height: 'auto',
-                    padding: '8px',
+                    padding: '10px',
                     display: 'flex',
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -90,7 +91,7 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
             />
             <TextField
                 label="Rename Node"
-                value={newName}
+                value={selectedNode.name}
                 onChange={handleChangeName}
                 margin="dense"
                 size="small"
