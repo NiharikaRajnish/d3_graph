@@ -85,11 +85,10 @@ const NetworkGraph = () => {
                         case 'Assesses':
                             return 'lightblue';
                         case 'Comes After':
-                            return '#df0d0d';
+                            return 'red';
                         case 'Is Part Of':
                             return 'grey';
-                        default:
-                            return '#df0d0d';
+                   
                     }
                 })
                 .lower(); // Move links below node shapes
@@ -122,8 +121,7 @@ const NetworkGraph = () => {
                         return 'red';
                     case 'Is Part Of':
                         return 'grey';
-                    default:
-                        return '#df0d0d'; // Default color for unrecognized types
+       
                 }
             });
 
@@ -308,6 +306,9 @@ const NetworkGraph = () => {
     const handleTypeChange = (newType) => {
         if (selectedLink) {
             selectedLink.type = newType;
+            selectedLink.source.asseses = null;
+            selectedLink.source.comesAfter = null;
+            selectedLink.source.isPartOf = null;
             switch (newType) {
                 case 'Assesses':
                     nodes.find(n => n.id === selectedLink.source.id).assess = selectedLink.target.id;
@@ -321,7 +322,8 @@ const NetworkGraph = () => {
             }
             setLinks([...links]); // Trigger re-render to update link type
             
-            // setNodes([...nodes]); // Trigger re-render to update nodes
+           //  setNodes([...nodes]); // Trigger re-render to update nodes
+
         }
     };
 
@@ -366,6 +368,7 @@ const NetworkGraph = () => {
             // const cLN = nodes.find(n => n.id === currentLinkingNode.id)
             if (!existingLink) {
                 currLN.comesAfter = d.id
+
                 // if (currLN.shape === 'Atomic ER' && (d.shape === 'diamond' || d.shape === 'Atomic ER')) {
                 //     currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
                 // } else if (currLN.shape === 'Atomic ER' && d.shape === 'iER') {
@@ -401,7 +404,7 @@ const NetworkGraph = () => {
                 // } else {
                 //     setLinkingMessage('Linking between selected nodes is not allowed');
                 //     setTimeout(() => setLinkingMessage(''), 2000);
-                //}
+                // }
 
                  setNodes([...nodes]);
                  setLinks(prevLinks => [...prevLinks, { source: currLN, target: d, type: 'Comes After' }]);
@@ -518,14 +521,14 @@ const NetworkGraph = () => {
 
     const handleRemoveLink = () => {
         if (selectedLink) {
-            var curr_type = selectedLink.type.trim()
-            curr_type = curr_type.split(' ').join('')
+            var curr_type = selectedLink.type.trim();
+            curr_type = curr_type.split(' ').join('');
             curr_type = curr_type.charAt(0).toLowerCase() + curr_type.slice(1);
 
             selectedLink.source[curr_type] = null;
             selectedLink.target[curr_type] = null;
 
-           
+
             setLinks(links.filter(l => l !== selectedLink));
             setSelectedLink(null);
         } else {
