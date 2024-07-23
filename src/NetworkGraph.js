@@ -365,45 +365,46 @@ const NetworkGraph = () => {
             );
             // const cLN = nodes.find(n => n.id === currentLinkingNode.id)
             if (!existingLink) {
-                if (currLN.shape === 'Atomic ER' && (d.shape === 'diamond' || d.shape === 'Atomic ER')) {
-                    currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
-                } else if (currLN.shape === 'Atomic ER' && d.shape === 'iER') {
-                    currLN.isPartOf = d.id
-                } else if (currLN.shape === 'Atomic ER' && d.shape === 'aER') {
-                    currLN.isPartOf = d.id
-                } else if (currLN.shape === 'Atomic ER' && d.shape === 'rER') {
-                    // setLinkingMessage('Atomic ER cannot link with rER');
-                    // setTimeout(() => setLinkingMessage(''), 2000);
-                    currLN.isPartOf = d.id
-                } else if (currLN.shape === 'diamond' && d.shape === 'Atomic ER') {
-                    currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
-                } else if (currLN.shape === 'iER' && d.shape === 'Atomic ER') {
-                    d.isPartOf = currLN.id
-                } else if (currLN.shape === 'iER' && d.shape === 'aER') {
-                    d.isPartOf = currLN.id
-                } else if (currLN.shape === 'iER' && d.shape === 'rER') {
-                    // setLinkingMessage('iER cannot link with rER');
-                    // setTimeout(() => setLinkingMessage(''), 2000);
-                    currLN.comesAfter = d.id
-                } else if (currLN.shape === 'iER' && d.shape === 'diamond') {
-                    currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
-                } else if (currLN.shape === 'aER' && d.shape === 'iER') {
-                    currLN.comesAfter = d.id
-                } else if (currLN.shape === 'aER' && d.shape === 'rER') {
-                    d.asseses = currLN.id
-                } else if (currLN.shape === 'rER' && d.shape === 'aER') {
-                    currLN.asseses = d.id
-                } else if (currLN.shape === 'rER' && d.shape !== 'aER') {
-                    // setLinkingMessage('Only aER can be linked with rER');
-                    // setTimeout(() => setLinkingMessage(''), 2000);
-                    currLN.asseses = d.id
-                } else {
-                    setLinkingMessage('Linking between selected nodes is not allowed');
-                    setTimeout(() => setLinkingMessage(''), 2000);
-                }
+                currLN.comesAfter = d.id
+                // if (currLN.shape === 'Atomic ER' && (d.shape === 'diamond' || d.shape === 'Atomic ER')) {
+                //     currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
+                // } else if (currLN.shape === 'Atomic ER' && d.shape === 'iER') {
+                //     currLN.isPartOf = d.id
+                // } else if (currLN.shape === 'Atomic ER' && d.shape === 'aER') {
+                //     currLN.isPartOf = d.id
+                // } else if (currLN.shape === 'Atomic ER' && d.shape === 'rER') {
+                //     // setLinkingMessage('Atomic ER cannot link with rER');
+                //     // setTimeout(() => setLinkingMessage(''), 2000);
+                //     currLN.isPartOf = d.id
+                // } else if (currLN.shape === 'diamond' && d.shape === 'Atomic ER') {
+                //     currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
+                // } else if (currLN.shape === 'iER' && d.shape === 'Atomic ER') {
+                //     d.isPartOf = currLN.id
+                // } else if (currLN.shape === 'iER' && d.shape === 'aER') {
+                //     d.isPartOf = currLN.id
+                // } else if (currLN.shape === 'iER' && d.shape === 'rER') {
+                //     // setLinkingMessage('iER cannot link with rER');
+                //     // setTimeout(() => setLinkingMessage(''), 2000);
+                //     currLN.comesAfter = d.id
+                // } else if (currLN.shape === 'iER' && d.shape === 'diamond') {
+                //     currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
+                // } else if (currLN.shape === 'aER' && d.shape === 'iER') {
+                //     currLN.comesAfter = d.id
+                // } else if (currLN.shape === 'aER' && d.shape === 'rER') {
+                //     d.asseses = currLN.id
+                // } else if (currLN.shape === 'rER' && d.shape === 'aER') {
+                //     currLN.asseses = d.id
+                // } else if (currLN.shape === 'rER' && d.shape !== 'aER') {
+                //     // setLinkingMessage('Only aER can be linked with rER');
+                //     // setTimeout(() => setLinkingMessage(''), 2000);
+                //     currLN.asseses = d.id
+                // } else {
+                //     setLinkingMessage('Linking between selected nodes is not allowed');
+                //     setTimeout(() => setLinkingMessage(''), 2000);
+                //}
 
-                setNodes([...nodes]);
-                // setLinks(prevLinks => [...prevLinks, { source: currentLinkingNode, target: d, type: 'Comes After' }]);
+                 setNodes([...nodes]);
+                 setLinks(prevLinks => [...prevLinks, { source: currLN, target: d, type: 'Comes After' }]);
             }
 
             setLinkingNode(null);
@@ -517,6 +518,14 @@ const NetworkGraph = () => {
 
     const handleRemoveLink = () => {
         if (selectedLink) {
+            var curr_type = selectedLink.type.trim()
+            curr_type = curr_type.split(' ').join('')
+            curr_type = curr_type.charAt(0).toLowerCase() + curr_type.slice(1);
+
+            selectedLink.source[curr_type] = null;
+            selectedLink.target[curr_type] = null;
+
+           
             setLinks(links.filter(l => l !== selectedLink));
             setSelectedLink(null);
         } else {
