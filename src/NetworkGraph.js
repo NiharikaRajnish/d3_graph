@@ -215,7 +215,7 @@ const NetworkGraph = () => {
         function linkClicked(event, d) {
             setSelectedLink(d);
             setSelectedNode(null); // Deselect node if a link is clicked
-            setAnchorElLink(event.currentTarget); // Set anchor for link popover
+            setAnchorElLink(d); // Set anchor for link popover
             updateLinkBorders(d.id); // Update link borders
 
             // Deselect any previously clicked node
@@ -319,7 +319,9 @@ const NetworkGraph = () => {
                     nodes.find(n => n.id === selectedLink.source.id).isPartOf = selectedLink.target.id;
                     break;
             }
-            setNodes([...nodes]); // Trigger re-render to update link type
+            setLinks([...links]); // Trigger re-render to update link type
+            
+            // setNodes([...nodes]); // Trigger re-render to update nodes
         }
     };
 
@@ -370,8 +372,9 @@ const NetworkGraph = () => {
                 } else if (currLN.shape === 'Atomic ER' && d.shape === 'aER') {
                     currLN.isPartOf = d.id
                 } else if (currLN.shape === 'Atomic ER' && d.shape === 'rER') {
-                    setLinkingMessage('Atomic ER cannot link with rER');
-                    setTimeout(() => setLinkingMessage(''), 2000);
+                    // setLinkingMessage('Atomic ER cannot link with rER');
+                    // setTimeout(() => setLinkingMessage(''), 2000);
+                    currLN.isPartOf = d.id
                 } else if (currLN.shape === 'diamond' && d.shape === 'Atomic ER') {
                     currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
                 } else if (currLN.shape === 'iER' && d.shape === 'Atomic ER') {
@@ -379,19 +382,21 @@ const NetworkGraph = () => {
                 } else if (currLN.shape === 'iER' && d.shape === 'aER') {
                     d.isPartOf = currLN.id
                 } else if (currLN.shape === 'iER' && d.shape === 'rER') {
-                    setLinkingMessage('iER cannot link with rER');
-                    setTimeout(() => setLinkingMessage(''), 2000);
+                    // setLinkingMessage('iER cannot link with rER');
+                    // setTimeout(() => setLinkingMessage(''), 2000);
+                    currLN.comesAfter = d.id
                 } else if (currLN.shape === 'iER' && d.shape === 'diamond') {
                     currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
                 } else if (currLN.shape === 'aER' && d.shape === 'iER') {
-                    currLN.isPartOf = d.id
+                    currLN.comesAfter = d.id
                 } else if (currLN.shape === 'aER' && d.shape === 'rER') {
                     d.asseses = currLN.id
                 } else if (currLN.shape === 'rER' && d.shape === 'aER') {
                     currLN.asseses = d.id
                 } else if (currLN.shape === 'rER' && d.shape !== 'aER') {
-                    setLinkingMessage('Only aER can be linked with rER');
-                    setTimeout(() => setLinkingMessage(''), 2000);
+                    // setLinkingMessage('Only aER can be linked with rER');
+                    // setTimeout(() => setLinkingMessage(''), 2000);
+                    currLN.asseses = d.id
                 } else {
                     setLinkingMessage('Linking between selected nodes is not allowed');
                     setTimeout(() => setLinkingMessage(''), 2000);
@@ -605,8 +610,9 @@ const NetworkGraph = () => {
     }
 
     const updateLinkBorders = (selectedLinkId) => {
+
         d3.select(svgRef.current).selectAll('.link')
-            .attr('stroke', d => (d === selectedLinkId ? 'black' : '#df0d0d'))
+            // .attr('stroke', d => (d === selectedLinkId ? 'black' : 'none'))
             .attr('stroke-width', d => (d === selectedLinkId ? 5 : 3))
             .classed('clicked', d => d === selectedLinkId);
     }
