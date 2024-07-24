@@ -65,11 +65,18 @@ const NetworkGraph = () => {
         const svg = d3.select(svgRef.current);
         const ticked = () => {
 
-            let dimensions = new Map();
+            svg.selectAll('.node')
+                .attr('transform', d => `translate(${d.x},${d.y})`)
+                .attr("cx", (d) => { return d.x = Math.max(radius, Math.min(width - 100 - radius, d.x)); })
+                .attr("cy", (d) => { return d.y = Math.max(radius, Math.min(height - radius, d.y)); });
+
+
+            // let dimensions = new Map();
             svg.selectAll('.nodeShape')
                 .attr('d', d => getShapePath(d.shape)) // Update node shape path
                 .attr('fill', d => d.color || color(d.type))
-                .attr('transform', d => `scale(${getNodeScale(d.size)})`)
+                .attr('transform', d => `scale(${getNodeScale(d.size)})`);
+
             svg.selectAll('.link')
                 // .attr("x1", d => d.source.x)
                 // .attr("y1", d => d.source.y)
@@ -86,7 +93,6 @@ const NetworkGraph = () => {
                             return 'red';
                         case 'Is Part Of':
                             return 'grey';
-
                     }
                 })
                 .lower(); // Move links below node shapes
@@ -96,19 +102,13 @@ const NetworkGraph = () => {
                         case 'Assesses':
                             return 'lightblue';
                         case 'Comes After':
-                            return '#df0d0d';
+                            return 'red';
                         case 'Is Part Of':
                             return 'grey';
                         default:
                             return '#df0d0d';
                     }
                 })
-            svg.selectAll('.node')
-                .attr('transform', d => `translate(${d.x},${d.y})`)
-                .attr("cx", (d) => { return d.x = Math.max(radius, Math.min(width - 100 - radius, d.x)); })
-                .attr("cy", (d) => { return d.y = Math.max(radius, Math.min(height - radius, d.y)); });
-
-
             svg.selectAll('.nodeLabel')
                 .text(d => d.name) // Update node's label text
                 .attr('style', 'font-weight: bold; font-size: 8px;')
@@ -191,8 +191,7 @@ const NetworkGraph = () => {
                         return 'red';
                     case 'Is Part Of':
                         return 'grey';
-                    default:
-                        return '#df0d0d'; // Default color for unrecognized types
+
                 }
             })
             .attr("marker-mid", function (d) { return "url(#" + (d.source.id + "-" + d.target.id).replace(/\s+/g, '') + ")"; })
