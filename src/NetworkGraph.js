@@ -130,13 +130,12 @@ const NetworkGraph = () => {
         };
 
         // Create a zoom behavior
+
         // const zoom = d3.zoom()
         //     .scaleExtent([0.5, 5]) // Set the zoom scale limits
         //     .on('zoom', (event) => {
-        //         svg.attr('transform', event.transform);
+        //         svg.select('g').attr('transform', event.transform);
         //     });
-
-        const g = svg.append('g'); // to apply group transformations
         // svg.call(zoom);
 
         const simulation = d3.forceSimulation(nodes.filter(n => !n.hidden))
@@ -184,7 +183,7 @@ const NetworkGraph = () => {
             .append("path")
             .attr("d", "M0,-5L10,0L0,5");
 
-        const link = g.selectAll('.link')
+        const link = svg.select('g').selectAll('.link')
             .data(links.filter(l => !l.hidden), d => `${d.source.id}-${d.target.id}`);
 
         link.exit().remove();
@@ -238,7 +237,7 @@ const NetworkGraph = () => {
         //     .attr("startOffset", "50%")
         //     .text(d => d.type);
 
-        const node = g.selectAll('.node')
+        const node = svg.select('g').selectAll('.node')
             .data(nodes.filter(n => !n.hidden), d => d.id);
 
 
@@ -362,9 +361,9 @@ const NetworkGraph = () => {
         }
 
         return () => {
-            g.selectAll('.node').remove();
-            g.selectAll('.link').remove();
-            g.selectAll('.markerDef').remove();
+            svg.selectAll('.node').remove();
+            svg.selectAll('.link').remove();
+            svg.selectAll('.markerDef').remove();
             simulation.stop(); // Stop simulation on component unmount
         };
 
@@ -781,6 +780,7 @@ const NetworkGraph = () => {
                 </Select>
             </FormControl>
             <svg ref={svgRef} width='100%' height='80vh' viewBox={`0 0 ${width} ${height}`}>
+                <g></g>
                 <defs></defs>
             </svg>
             {linkingMessage && (
