@@ -131,12 +131,12 @@ const NetworkGraph = () => {
 
         // Create a zoom behavior
 
-        // const zoom = d3.zoom()
-        //     .scaleExtent([0.5, 5]) // Set the zoom scale limits
-        //     .on('zoom', (event) => {
-        //         svg.select('g').attr('transform', event.transform);
-        //     });
-        // svg.call(zoom);
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 5]) // Set the zoom scale limits
+            .on('zoom', (event) => {
+                svg.select('g').attr('transform', event.transform);
+            });
+        svg.call(zoom);
 
         const simulation = d3.forceSimulation(nodes.filter(n => !n.hidden))
             .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(100)) // Link force
