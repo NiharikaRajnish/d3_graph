@@ -449,9 +449,6 @@ const NetworkGraph = () => {
         }
     };
 
-    const handleRecenter = () => {
-        d3.select(svgRef.current).select('g').attr('transform', 'translate(0) scale(1)')
-    };
 
     const handleRenameNode = (newName) => {
         if (selectedNode) {
@@ -772,7 +769,7 @@ const NetworkGraph = () => {
                 </Button>
             </label>
             <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add Node</Button>
-            <Button id='recenterButton' onClick={handleRecenter} variant="outlined">Recenter</Button>
+            <Button id='recenterButton' variant="outlined">Recenter</Button>
             {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
             <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
                 <InputLabel>Views</InputLabel>
