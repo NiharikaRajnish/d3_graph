@@ -12,8 +12,8 @@ const width = window.innerWidth * 0.9,
 
 const NetworkGraph = () => {
     const initialNodes = [
-        { id: 0, name: 'start', shape: 'diamond', size: 10, color: 'green', fx: 50, fy: height / 2, fixed: true, asseses: null, isPartOf: null, comesAfter: null }, // Fixed position for start node
-        { id: 54321, name: 'end', shape: 'diamond', size: 10, color: 'green', fx: width - 50, fy: height / 2, fixed: true, asseses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
+        { id: 0, name: 'start', shape: 'diamond', size: 10, color: 'green', fx: 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null }, // Fixed position for start node
+        { id: 54321, name: 'end', shape: 'diamond', size: 10, color: 'green', fx: width - 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
     ];
     const initialLinks = [];
 
@@ -82,9 +82,9 @@ const NetworkGraph = () => {
                 // .attr("y1", d => d.source.y)
                 // .attr("x2", d => d.target.x)
                 // .attr("y2", d => d.target.y)
-                .attr("points", d => d.source.x + "," + d.source.y + " " +
-                    (d.source.x + d.target.x) / 2 + "," + (d.source.y + d.target.y) / 2 + " " +
-                    d.target.x + "," + d.target.y)
+                .attr("points", d => (d.source.fx || d.source.x) + "," + (d.source.fy || d.source.y) + " " +
+                    ((d.source.fx || d.source.x) + (d.target.fx || d.target.x)) / 2 + "," + ((d.source.fy || d.source.y) + (d.target.fy || d.target.y)) / 2 + " " +
+                    (d.target.fx || d.target.x) + "," + (d.target.fy || d.target.y))
                 .style("stroke", d => {
                     switch (d.type) {
                         case 'Assesses':
@@ -128,6 +128,16 @@ const NetworkGraph = () => {
 
             // });
         };
+
+        // Create a zoom behavior
+        // const zoom = d3.zoom()
+        //     .scaleExtent([0.5, 5]) // Set the zoom scale limits
+        //     .on('zoom', (event) => {
+        //         svg.attr('transform', event.transform);
+        //     });
+
+        const g = svg.append('g'); // to apply group transformations
+        // svg.call(zoom);
 
         const simulation = d3.forceSimulation(nodes.filter(n => !n.hidden))
             .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(100)) // Link force
@@ -174,7 +184,7 @@ const NetworkGraph = () => {
             .append("path")
             .attr("d", "M0,-5L10,0L0,5");
 
-        const link = svg.selectAll('.link')
+        const link = g.selectAll('.link')
             .data(links.filter(l => !l.hidden), d => `${d.source.id}-${d.target.id}`);
 
         link.exit().remove();
@@ -228,7 +238,7 @@ const NetworkGraph = () => {
         //     .attr("startOffset", "50%")
         //     .text(d => d.type);
 
-        const node = svg.selectAll('.node')
+        const node = g.selectAll('.node')
             .data(nodes.filter(n => !n.hidden), d => d.id);
 
 
@@ -352,9 +362,9 @@ const NetworkGraph = () => {
         }
 
         return () => {
-            svg.selectAll('.node').remove();
-            svg.selectAll('.link').remove();
-            svg.selectAll('.markerDef').remove();
+            g.selectAll('.node').remove();
+            g.selectAll('.link').remove();
+            g.selectAll('.markerDef').remove();
             simulation.stop(); // Stop simulation on component unmount
         };
 
@@ -410,7 +420,7 @@ const NetworkGraph = () => {
         if (selectedLink) {
             switch (selectedLink.type) {
                 case 'Assesses':
-                    nodes.find(n => n.id === selectedLink.source.id).assess = null;
+                    nodes.find(n => n.id === selectedLink.source.id).assesses = null;
                     break;
                 case 'Comes After':
                     nodes.find(n => n.id === selectedLink.source.id).comesAfter = null;
@@ -421,7 +431,7 @@ const NetworkGraph = () => {
             }
             switch (newType) {
                 case 'Assesses':
-                    nodes.find(n => n.id === selectedLink.source.id).assess = selectedLink.target.id;
+                    nodes.find(n => n.id === selectedLink.source.id).assesses = selectedLink.target.id;
                     break;
                 case 'Comes After':
                     nodes.find(n => n.id === selectedLink.source.id).comesAfter = selectedLink.target.id;
@@ -446,7 +456,7 @@ const NetworkGraph = () => {
         const maxIdNode = nodes.filter(n => n.id !== 54321).reduce((maxNode, node) => (node.id > maxNode.id) ? node : maxNode, nodes[0]);
         const id = maxIdNode.id + 1;
         const name = `Node ${id}`;
-        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, asseses: null, isPartOf: null, comesAfter: null };
+        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, assesses: null, isPartOf: null, comesAfter: null };
         setNodes([...nodes, newNode]);
         // setLinks([...links]);
 
@@ -501,13 +511,13 @@ const NetworkGraph = () => {
                 // } else if (currLN.shape === 'aER' && d.shape === 'iER') {
                 //     currLN.comesAfter = d.id
                 // } else if (currLN.shape === 'aER' && d.shape === 'rER') {
-                //     d.asseses = currLN.id
+                //     d.assesses = currLN.id
                 // } else if (currLN.shape === 'rER' && d.shape === 'aER') {
-                //     currLN.asseses = d.id
+                //     currLN.assesses = d.id
                 // } else if (currLN.shape === 'rER' && d.shape !== 'aER') {
                 //     // setLinkingMessage('Only aER can be linked with rER');
                 //     // setTimeout(() => setLinkingMessage(''), 2000);
-                //     currLN.asseses = d.id
+                //     currLN.assesses = d.id
                 // } else {
                 //     setLinkingMessage('Linking between selected nodes is not allowed');
                 //     setTimeout(() => setLinkingMessage(''), 2000);
@@ -574,10 +584,10 @@ const NetworkGraph = () => {
             //     node.y = height / 2 + (((Math.random() * 2) - 1) * (height / 2));
             // }
         });
-        const filteredNodes = parsedData.filter(node => node.comesAfter && !node.assesses && !node.isPartOf);
-        const maxIdNode = filteredNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, filteredNodes[0]);
-        const minIdNode = filteredNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, filteredNodes[0]);
-        const tmpNodes = nodes.filter(n => n.id === 54321 || n.id === 0).forEach(node => { // add only start and end
+        const filteredNodes = parsedData.filter(node => node.shape === 'iER');
+        let maxIdNode = filteredNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, filteredNodes[0]);
+        let minIdNode = filteredNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, filteredNodes[0]);
+        const tmpNodes = nodes.filter(n => (n.id === 54321) || (n.id === 0)).forEach(node => { // add only start and end
             if (node.id === 54321) {
                 const updEnd = {
                     ...node,
@@ -586,11 +596,8 @@ const NetworkGraph = () => {
                 parsedData.push(updEnd);
             }
             else if (node.id === 0) {
-                const upStart = {
-                    ...node,
-                    comesAfter: minIdNode.id
-                }
-                parsedData.push(upStart)
+                parsedData.find(n => n.id === minIdNode.id).comesAfter = 0;
+                parsedData.push(node)
             };
             return node
 
