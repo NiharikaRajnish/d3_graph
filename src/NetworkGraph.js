@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import { forceSimulation, forceManyBody, forceLink, forceCenter, forceX } from 'd3-force';
 import { Button, Typography } from '@mui/material';
 import { MenuItem, Select, FormControl, InputLabel } from '@mui/material';
 import { Add, Remove, FilterList } from '@mui/icons-material';
 import NodePopover from './NodePopover'; // Adjust import path as per your project structure
 import LinkPopover from './LinkPopover'; // Adjust import path as per your project structure
 
-const width = window.innerWidth * 0.9,
-    height = 600,
+const size = window.innerWidth/400
+const width = window.innerWidth * 0.9
+const height = window.innerHeight * 0.9,
     radius = 15;
 
 const NetworkGraph = () => {
@@ -97,11 +99,28 @@ const NetworkGraph = () => {
                 .attr('style', 'font-weight: bold; font-size: 8px;')
         };
 
+        const shiftX = 10; // Amount to shift nodes to the right
+
+    // Custom force to shift nodes to the right
+    function shiftRight(alpha) {
+        nodes.forEach(d => {
+            d.x += shiftX * alpha; // Apply the shift proportionally to alpha
+        });
+    }
+   
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(110)) // Link force
+
+            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(d => d.isPartOf !== null ? 60 : 100)) // Link force
             .force('charge', d3.forceManyBody().strength(-1000).distanceMax(175).distanceMin(1)) // Charge force to repel nodes
-            .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
+            // .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
+            // .force('y', d3.forceY().strength(1))
+            //   .force('y', d3.forceY(height).strength(d => d.comesAfter !== null ? 100 : 0))
+             .force("shiftRight", shiftRight) 
+            
             .on('tick', ticked)
+
+
+
 
         const link = svg.selectAll('.link')
             .data(links, d => `${d.source.id}-${d.target.id}`)
@@ -339,7 +358,7 @@ const NetworkGraph = () => {
         const maxIdNode = nodes.reduce((maxNode, node) => ((node.id > maxNode.id) && (node.id !== 53421)) ? node : maxNode, nodes[0]);
         const id = nodes.length ? nodes[nodes.length - 1].id + 1 : 1;
         const name = `Node ${id}`;
-        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, asseses: null, isPartOf: null, comesAfter: null };
+        const newNode = { id, name, shape: 'Atomic ER', size: size, color: '#ADD8E6', x: width / 2, y: height / 2, asseses: null, isPartOf: null, comesAfter: null };
         setNodes([...nodes, newNode]);
         // setLinks([...links]);
 
@@ -443,7 +462,7 @@ const NetworkGraph = () => {
                 description,
                 url,
                 type,
-                size: 7,
+                size: size,
                 isPartOf: isPartOf ? +isPartOf : null,
                 isFormatOf: +isFormatOf,
                 assesses: assesses ? +assesses : null,
@@ -661,7 +680,7 @@ const NetworkGraph = () => {
                     <MenuItem value="4">View 4: Requirements</MenuItem>
                 </Select>
             </FormControl>
-            <svg ref={svgRef} width='100%' height='80vh' viewBox={`0 0 ${width} ${height}`}></svg>
+            <svg ref={svgRef} width='100%' height='90vh' viewBox={`0 0 ${width} ${height}`}></svg>
             {linkingMessage && (
                 <Typography
                     variant="body1"
