@@ -135,6 +135,12 @@ const NetworkGraph = () => {
             .scaleExtent([0.5, 5]) // Set the zoom scale limits
             .on('zoom', (event) => {
                 svg.select('g').attr('transform', event.transform);
+            })
+            .on('end', () => {
+                const recenterButton = document.getElementById('recenterButton');
+                recenterButton.addEventListener('click', () => {
+                    svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity);
+                });
             });
         svg.call(zoom);
 
@@ -441,6 +447,10 @@ const NetworkGraph = () => {
             }
             setNodes([...nodes]); // Trigger re-render to update link type
         }
+    };
+
+    const handleRecenter = () => {
+        d3.select(svgRef.current).select('g').attr('transform', 'translate(0) scale(1)')
     };
 
     const handleRenameNode = (newName) => {
@@ -762,6 +772,7 @@ const NetworkGraph = () => {
                 </Button>
             </label>
             <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add Node</Button>
+            <Button id='recenterButton' onClick={handleRecenter} variant="outlined">Recenter</Button>
             {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
             <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
                 <InputLabel>Views</InputLabel>
