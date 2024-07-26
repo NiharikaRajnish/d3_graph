@@ -26,7 +26,7 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
 
         // an atomic node can only have comes after and is part of
         if (selectedLink.source.shape === 'Atomic ER' || selectedLink.target.shape === 'Atomic ER') {
-           return [
+            return [
                 <MenuItem key="Comes After" value="Comes After">Comes After</MenuItem>,
                 <MenuItem key="Is Part Of" value="Is Part Of">Is Part Of</MenuItem>,
             ];
@@ -36,36 +36,36 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
         //only rERs should have the assess relation
         if (selectedLink.source.shape === 'rER' || selectedLink.target.shape === 'rER') {
             return [
-                 <MenuItem key="Comes After" value="Comes After">Comes After</MenuItem>,
-                 <MenuItem key="Is Part Of" value="Is Part Of">Is Part Of</MenuItem>,
-                 <MenuItem value="Assesses">Assesses</MenuItem>
-             ];
- 
-         }
+                <MenuItem key="Comes After" value="Comes After">Comes After</MenuItem>,
+                <MenuItem key="Is Part Of" value="Is Part Of">Is Part Of</MenuItem>,
+                <MenuItem value="Assesses">Assesses</MenuItem>
+            ];
 
-         //
-         if (selectedLink.source.shape === 'rER' || selectedLink.target.shape === 'rER') {
+        }
+
+        //
+        if (selectedLink.source.shape === 'rER' || selectedLink.target.shape === 'rER') {
             return [
-                 <MenuItem key="Comes After" value="Comes After">Comes After</MenuItem>,
-                 <MenuItem key="Is Part Of" value="Is Part Of">Is Part Of</MenuItem>,
-                 <MenuItem value="Assesses">Assesses</MenuItem>
-             ];
- 
-         }
-         
+                <MenuItem key="Comes After" value="Comes After">Comes After</MenuItem>,
+                <MenuItem key="Is Part Of" value="Is Part Of">Is Part Of</MenuItem>,
+                <MenuItem value="Assesses">Assesses</MenuItem>
+            ];
 
-         
+        }
 
 
 
-        else{
+
+
+
+        else {
 
             return [
                 <MenuItem key="Comes After" value="Comes After">Comes After</MenuItem>,
                 <MenuItem key="Is Part Of" value="Is Part Of">Is Part Of</MenuItem>,
-                
+
             ];
-    }
+        }
     };
 
     return (
@@ -83,12 +83,12 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
                 horizontal: 'center',
             }}
         >
-            <FormControl style={{ margin: '8px' , width: '150px'}}>
+            <FormControl style={{ margin: '8px', width: '150px' }}>
                 <InputLabel>Type</InputLabel>
                 <Select
-                   value={ selectedLink.type}
-                   onChange={handleChange}
-                    
+                    value={selectedLink.type}
+                    onChange={handleChange}
+
                 >
                     {renderMenuItems()}
                 </Select>
@@ -97,8 +97,8 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
                 onClick={handleRemoveLink}
                 startIcon={<Remove />}
                 variant="outlined"
-                style={{ margin: '8px' , width: '100px' }}
-            
+                style={{ margin: '8px', width: '100px' }}
+
             >
                 Remove Link
             </Button>

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Button, Popover, TextField } from '@mui/material';
-import { Link as LinkIcon } from '@mui/icons-material';
+import { Link as LinkIcon, Remove } from '@mui/icons-material';
 
-const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode, handleShapeChange, handleSizeChange, handleRenameNode }) => {
+const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode, handleShapeChange, handleSizeChange, handleRenameNode, handleRemoveNode }) => {
     const [newName, setNewName] = useState(selectedNode?.name || '');
     
 
@@ -12,6 +12,11 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
 
     const handleRenameClick = () => {
         handleRenameNode(newName); // Update selectedNode's name
+        onClose();
+    };
+
+    const handleRemoveClick = () => {
+        handleRemoveNode(newName); // remove selectedNode
         onClose();
     };
 
@@ -72,7 +77,7 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
                 }}
                 margin="dense"
                 size="small"
-              
+
                 style={{ marginLeft: '4px', marginRight: '4px', width: '130px' }}
             >
                 <option value="Atomic ER">Atomic ER</option>
@@ -102,9 +107,19 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
                 variant="outlined"
                 color="primary"
                 size="small"
-                style={{ marginLeft: '4px',  width: '20px' }}
+                style={{ marginLeft: '4px', width: '20px' }}
             >
                 Rename
+            </Button>
+            <Button
+                // startIcon={<Remove/>}
+                onClick={handleRemoveClick}
+                variant="outlined"
+                color="primary"
+                size="small"
+                style={{ marginLeft: '4px', width: '20px' }}
+            >
+                Remove
             </Button>
         </Popover>
     );
