@@ -1,0 +1,34 @@
+/* Accordion.css */
+.accordion {
+    width: 100%;
+  }
+  
+  .accordion-item {
+    /* border-bottom: 1px solid #ccc; */
+  }
+  
+  .accordion-title {
+    color: #ffffff;
+    padding: 10px;
+    cursor: pointer;
+
+  }
+  .accordion-title:hover {
+    background-color: #ddd; /* Lighter background color on hover */
+    color: #000000;
+  }
+  
+  .accordion-content {
+    margin: 8px;
+    padding: 0; /* Remove padding if necessary */
+    background-color: #fff;
+    display: flex; /* Use flex to control child elements */
+    justify-content: center; /* Center image horizontally */
+    align-items: center; /* Center image vertically */
+  }
+  
+  .accordion-image {
+    width: 100%; /* Make image take up full container width */
+    height: 30%; /* Maintain aspect ratio */
+  }
+  

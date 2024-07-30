@@ -5,6 +5,7 @@ import { MenuItem, Select, FormControl, InputLabel } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import NodePopover from './NodePopover'; // Adjust import path as per your project structure
 import LinkPopover from './LinkPopover'; // Adjust import path as per your project structure
+import Navbar from './Navbar';
 
 const width = window.innerWidth * 0.9,
     height = 600,
@@ -772,6 +773,9 @@ const NetworkGraph = () => {
 
     return (
         <div>
+            <div className='navbar'>
+            <Navbar/>
+            <div className='buttons'>
             <input
                 type="file"
                 accept=".csv"
@@ -785,6 +789,7 @@ const NetworkGraph = () => {
                 </Button>
             </label>
             <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
+            </div>
             {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
             <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
                 <InputLabel>Views</InputLabel>
@@ -802,6 +807,7 @@ const NetworkGraph = () => {
                     <MenuItem value="4">View 4: Requirements</MenuItem>
                 </Select>
             </FormControl>
+            </div>
             <svg ref={svgRef} width='100%' height='80vh' viewBox={`0 0 ${width} ${height}`}>
                 <g></g>
                 <defs></defs>
@@ -822,6 +828,7 @@ const NetworkGraph = () => {
                     {linkingMessage}
                 </Typography>
             )}
+          
             {selectedNode && (
                 console.log(anchorElNode),
                 <NodePopover

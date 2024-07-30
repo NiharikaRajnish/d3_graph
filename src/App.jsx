@@ -1,5 +1,6 @@
 import React from 'react';
 import NetworkGraph from './NetworkGraph';
+import Navbar from './Navbar';
 import './App.css';
 
 const App = () => {
