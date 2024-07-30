@@ -69,7 +69,7 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
             </Button>
             <TextField
                 select
-                label="Shape"
+                label="Type"
                 value={selectedNode?.shape || 'circle'}
                 onChange={handleShapeOptionChange}
                 SelectProps={{
@@ -94,14 +94,14 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
                 size="small"
                 style={{ marginLeft: '4px', marginRight: '4px', width: '55px' }}
             />
-            <TextField
-                label="Rename Node"
-                value={selectedNode.name}
-                onChange={handleChangeName}
-                margin="dense"
-                size="small"
-                style={{ marginLeft: '4px', width: '150px' }}
-            />
+<TextField
+    label="Rename ER"
+    value={newName}
+    onChange={handleChangeName}
+    margin="dense"
+    size="small"
+    style={{ marginLeft: '4px', width: '150px' }}
+/>
             <Button
                 onClick={handleRenameClick}
                 variant="outlined"

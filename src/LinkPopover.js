@@ -19,6 +19,13 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
     //rules for linking
 
     const renderMenuItems = () => {
+        if (selectedLink.source.shape === 'diamond' || selectedLink.target.shape === 'diamond') {
+            return [
+                <MenuItem key="Comes After" value="Comes After">Comes After</MenuItem>
+            ];
+
+        }
+
         // Only allow Atomics to be linked together with Comes After
         if (selectedLink.source.shape === 'Atomic ER' && selectedLink.target.shape === 'Atomic ER') {
             return <MenuItem value="Comes After">Comes After</MenuItem>;
@@ -55,14 +62,11 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
 
 
 
-
-
-
         else {
 
             return [
                 <MenuItem key="Comes After" value="Comes After">Comes After</MenuItem>,
-                <MenuItem key="Is Part Of" value="Is Part Of">Is Part Of</MenuItem>,
+                 <MenuItem key="Is Part Of" value="Is Part Of">Is Part Of</MenuItem>,
 
             ];
         }

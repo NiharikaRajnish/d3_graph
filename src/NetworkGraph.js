@@ -137,11 +137,25 @@ const NetworkGraph = () => {
         //         svg.select('g').attr('transform', event.transform);
         //     });
         // svg.call(zoom);
+        
+
+        // Function to create a force that keeps nodes at a fixed vertical position
+    const verticalForce = (nodes, strength) => {
+            return (alpha) => {
+                nodes.forEach(node => {
+                    if (node.comesAfter !== null && node.comesAfter !== undefined) {
+                        // Apply vertical force to nodes with comesAfter property
+                        node.vy -= strength * (node.y - height / 2) * alpha; // Adjust to pull nodes to vertical center
+                    }
+                });
+            };
+        };
 
         const simulation = d3.forceSimulation(nodes.filter(n => !n.hidden))
             .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(100)) // Link force
             .force('charge', d3.forceManyBody().strength(-2000).distanceMax(175).distanceMin(0.01)) // Charge force to repel nodes
             .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
+            .force('y', verticalForce(nodes, 1)) // Custom vertical force
             .on('tick', ticked);
 
         const marker = svg.select("defs")
@@ -454,7 +468,7 @@ const NetworkGraph = () => {
     const handleAddNode = () => {
         const maxIdNode = nodes.filter(n => n.id !== 54321).reduce((maxNode, node) => (node.id > maxNode.id) ? node : maxNode, nodes[0]);
         const id = maxIdNode.id + 1;
-        const name = `Node ${id}`;
+        const name = `ER ${id}`;
         const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, assesses: null, isPartOf: null, comesAfter: null };
         setNodes([...nodes, newNode]);
         // setLinks([...links]);
@@ -551,7 +565,7 @@ const NetworkGraph = () => {
     };
 
     const parseCSV = (data) => {
-        const parsedData = d3.csvParse(data, ({ identifier, title, description, url, type, isPartOf, isFormatOf, assesses, comesAfter }) => {
+        let parsedData = d3.csvParse(data, ({ identifier, title, description, url, type, isPartOf, isFormatOf, assesses, comesAfter }) => {
             const node = {
                 id: +identifier,
                 name: title,
@@ -567,6 +581,14 @@ const NetworkGraph = () => {
             }
             return node
         })
+
+        //   Remove nodes with title "start" or "end" (case insensitive)
+         parsedData = parsedData.filter(node => {
+            const title = node.name ? node.name.toLowerCase() : '';
+            return title !== 'start' && title !== 'end';
+        });
+
+
         const countIERNodes = parsedData.filter(node => node.shape === 'iER').length;
         let cnt = 0;
         let tmpID = -5
@@ -601,6 +623,7 @@ const NetworkGraph = () => {
             return node
 
         })
+
 
         setNodes(parsedData);
         // setLinks(newLinks);
@@ -761,7 +784,7 @@ const NetworkGraph = () => {
                     Upload CSV
                 </Button>
             </label>
-            <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add Node</Button>
+            <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
             {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
             <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
                 <InputLabel>Views</InputLabel>
