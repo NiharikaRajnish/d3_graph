@@ -5,19 +5,54 @@ import Accordion from './Accordian';
 import './Navbar.css';
 import { IconContext } from 'react-icons';
 
-function Navbar() {
+
+const Navbar = ({ onAction }) => {
   const [sidebar, setSidebar] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const showSidebar = () => setSidebar(!sidebar);
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
 
+
+
   let data = [
     {
         name: "Show Legend",
-        image: "https://docs.google.com/drawings/d/e/2PACX-1vS01U41gDzYPLY-O7ysppcy_Z13PtUnt9p-eKzvmNHm6IJ2UZqCJfZURNdRrg8MF_nWYci3UGNqcup4/pub?w=436&amp;h=301"
+        type: 'image',
+        image: "https://docs.google.com/drawings/d/e/2PACX-1vS01U41gDzYPLY-O7ysppcy_Z13PtUnt9p-eKzvmNHm6IJ2UZqCJfZURNdRrg8MF_nWYci3UGNqcup4/pub?w=872&amp;h=602"
+      
+},{
+  name: "Share",
+  type: 'buttons',
+  content: [
+    { 
+      label: "Download CSV", 
+      onClick: onAction
+    },
+    { 
+      label: "Download SVG", 
+      onClick: () => { 
+        // Your logic to download SVG
+        console.log("Download SVG clicked");
+      }
     }
-  ]
+]
+},
+{
+  name: "Adjust Node Sizes",
+  type: 'slider',
+  min: 0,           // Minimum value of the slider
+  max: 20,         // Maximum value of the slider
+  value: 7,        
+  onChange: (e) => { 
+    console.log('Slider value:', e.target.value); 
+  }
+},
+
+
+]
+
+
 
   return (
     <>

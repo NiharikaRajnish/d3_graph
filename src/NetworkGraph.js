@@ -3,9 +3,10 @@ import * as d3 from 'd3';
 import { Button, Typography } from '@mui/material';
 import { MenuItem, Select, FormControl, InputLabel } from '@mui/material';
 import { Add } from '@mui/icons-material';
-import NodePopover from './NodePopover'; // Adjust import path as per your project structure
-import LinkPopover from './LinkPopover'; // Adjust import path as per your project structure
+import NodePopover from './NodePopover';
+import LinkPopover from './LinkPopover';
 import Navbar from './Navbar';
+import { useSlider } from './SliderContext'; 
 
 const width = window.innerWidth * 0.9,
     height = 600,
@@ -13,8 +14,8 @@ const width = window.innerWidth * 0.9,
 
 const NetworkGraph = () => {
     const initialNodes = [
-        { id: 0, name: 'start', shape: 'diamond', size: 10, color: 'green', fx: 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null }, // Fixed position for start node
-        { id: 54321, name: 'end', shape: 'diamond', size: 10, color: 'green', fx: width - 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
+        { id: 0, name: 'start', type:'start' ,shape: 'diamond', size: 10, color: 'green', fx: 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null }, // Fixed position for start node
+        { id: 54321, name: 'end',type: 'end', shape: 'diamond', size: 10, color: 'green', fx: width - 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
     ];
     const initialLinks = [];
 
@@ -32,6 +33,7 @@ const NetworkGraph = () => {
     const svgRef = useRef(null);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
     const linkingNodeRef = useRef(linkingNode);
+    const { sliderValue } = useSlider();
 
     useEffect(() => {
         linkingNodeRef.current = linkingNode;
@@ -41,6 +43,18 @@ const NetworkGraph = () => {
         const newLinks = processLinks(nodes.filter(n => !n.hidden));
         setLinks(newLinks);
     }, [nodes]);
+
+    useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+          if (node.shape !== 'diamond') {
+            return { ...node, size: sliderValue }; // Update size for non-diamond nodes
+          }
+          return node; // Keep diamond nodes unchanged
+        });
+    
+        setNodes(updatedNodes);
+      }, [sliderValue]); // Dependency on sliderValue 
 
     const handleKeyDown = (event) => {
         if ((event.key === 'Delete' || event.key === '-') && selectedNode) {
@@ -771,10 +785,37 @@ const NetworkGraph = () => {
             .classed('clicked', d => d === selectedLinkId);
     }
 
+    function downloadCSV() {
+        let csvContent = "ID,name,alternative title,target URL,type,isPartOf,assesses,comesAfter\n";
+        nodes.forEach(node => {
+            if(node.alternativeTitle == undefined){
+                node.alternativeTitle =""
+            }
+            if(node.targetURL == undefined){
+                node.targetURL =""
+            }
+            csvContent += `${node.id},${node.name},${node.alternativeTitle},${node.targetURL},${node.type},${node.isPartOf || ""},${node.assesses || ""},${node.comesAfter || ""}\n`;
+        });
+    
+        let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        let link = document.createElement("a");
+        if (link.download !== undefined) {
+            let url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "network_data.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+
+    
+
     return (
         <div>
             <div className='navbar'>
-            <Navbar/>
+            <Navbar onAction={downloadCSV}/>
             <div className='buttons'>
             <input
                 type="file"
