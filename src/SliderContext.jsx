@@ -4,10 +4,15 @@ const SliderContext = createContext();
 
 const SliderProvider = ({ children }) => {
   const [sliderValue, setSliderValue] = useState(7); // Default value
+  const [aERSliderValue, setaERSliderValue] = useState(7); // Default value
+  const [iERSliderValue, setIERSliderValue] = useState(7); // Default value
+  const [rERSliderValue, setrERSliderValue] = useState(7); // Default value
+  const [atomicSliderValue, setatomicSliderValue] = useState(7); // Default value
+
   const nodeSize = Math.max(10, sliderValue);
 
   return (
-    <SliderContext.Provider value={{ sliderValue, setSliderValue }}>
+    <SliderContext.Provider value={{ sliderValue, setSliderValue, aERSliderValue ,setaERSliderValue,iERSliderValue,setIERSliderValue,rERSliderValue, setrERSliderValue,atomicSliderValue, setatomicSliderValue}}>
       {children}
     </SliderContext.Provider>
   );

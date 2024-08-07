@@ -33,7 +33,7 @@ const NetworkGraph = () => {
     const svgRef = useRef(null);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
     const linkingNodeRef = useRef(linkingNode);
-    const { sliderValue } = useSlider();
+    const { sliderValue, setSliderValue, aERSliderValue ,setaERSliderValue,iERSliderValue,setIERSliderValue,rERSliderValue, setrERSliderValue,atomicSliderValue, setatomicSliderValue} = useSlider();
 
     useEffect(() => {
         linkingNodeRef.current = linkingNode;
@@ -43,6 +43,8 @@ const NetworkGraph = () => {
         const newLinks = processLinks(nodes.filter(n => !n.hidden));
         setLinks(newLinks);
     }, [nodes]);
+
+    // Use Effects for SLides Node Resizing:
 
     useEffect(() => {
         // Update nodes sizes with slider
@@ -55,6 +57,66 @@ const NetworkGraph = () => {
     
         setNodes(updatedNodes);
       }, [sliderValue]); // Dependency on sliderValue 
+
+      useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+          if (node.shape !== 'diamond') {
+            return { ...node, size: sliderValue }; // Update size for non-diamond nodes
+          }
+          return node; // Keep diamond nodes unchanged
+        });
+    
+        setNodes(updatedNodes);
+      }, [sliderValue]); // Dependency on sliderValue 
+
+      useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+          if (node.shape == 'aER') {
+            return { ...node, size: aERSliderValue }; // Update size for non-diamond nodes
+          }
+          return node; // Keep diamond nodes unchanged
+        });
+    
+        setNodes(updatedNodes);
+      }, [aERSliderValue]); // Dependency on aERSliderValue
+
+      useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+          if (node.shape == 'iER') {
+            return { ...node, size: iERSliderValue }; // Update size for non-diamond nodes
+          }
+          return node; // Keep diamond nodes unchanged
+        });
+    
+        setNodes(updatedNodes);
+      }, [iERSliderValue]); // Dependency on aERSliderValue
+
+      useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+          if (node.shape == 'rER') {
+            return { ...node, size: rERSliderValue }; // Update size for non-diamond nodes
+          }
+          return node; // Keep diamond nodes unchanged
+        });
+    
+        setNodes(updatedNodes);
+      }, [rERSliderValue]); // Dependency on aERSliderValue
+
+      useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+          if (node.shape == 'Atomic ER') {
+            return { ...node, size: atomicSliderValue }; // Update size for non-diamond nodes
+          }
+          return node; // Keep diamond nodes unchanged
+        });
+    
+        setNodes(updatedNodes);
+      }, [atomicSliderValue]); // Dependency on aERSliderValue
 
     const handleKeyDown = (event) => {
         if ((event.key === 'Delete' || event.key === '-') && selectedNode) {

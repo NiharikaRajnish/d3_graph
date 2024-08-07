@@ -41,12 +41,9 @@ const Navbar = ({ onAction }) => {
 {
   name: "Adjust Node Sizes",
   type: 'slider',
-  min: 0,           // Minimum value of the slider
-  max: 20,         // Maximum value of the slider
+  min: 0,           
+  max: 20,        
   value: 7,        
-  onChange: (e) => { 
-    console.log('Slider value:', e.target.value); 
-  }
 },
 
 

@@ -2,6 +2,9 @@
 .accordion {
     width: 100%;
   }
+p{
+    color: #c3effa;
+  }
   
   .accordion-item {
     /* border-bottom: 1px solid #ccc; */

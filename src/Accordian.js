@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import './Accordian.css'; 
-import Slider from './Slider'
 import { useSlider } from './SliderContext'; 
 
 function Accordion({ items }) {
@@ -10,11 +9,32 @@ function Accordion({ items }) {
     setOpenIndex(openIndex === index ? null : index);
   };
 
-  const { sliderValue, setSliderValue } = useSlider();
+  const { sliderValue, setSliderValue, aERSliderValue ,setaERSliderValue,iERSliderValue,setIERSliderValue,rERSliderValue, setrERSliderValue,atomicSliderValue, setatomicSliderValue} = useSlider();
+  
+
   
   const handleSliderChange = (e) => {
       setSliderValue(e.target.value); // Update context with new value
     };
+
+    const handleSliderChange2 = (e) => {
+      setaERSliderValue(e.target.value); // Update context with new value
+    };
+
+    const handleSliderChange3 = (e) => {
+      setIERSliderValue(e.target.value); // Update context with new value
+    };
+
+    const handleSliderChange4 = (e) => {
+      setrERSliderValue(e.target.value); // Update context with new value
+    };
+
+    const handleSliderChange5 = (e) => {
+      setatomicSliderValue(e.target.value); // Update context with new value
+    };
+
+  
+  
   
 
   const renderContent = item => {
@@ -35,6 +55,7 @@ function Accordion({ items }) {
       case 'slider':
         return (
               <div>
+              <p>Resize All Nodes</p>
               <input
                 type="range"
                 min={item.min}
@@ -43,8 +64,50 @@ function Accordion({ items }) {
                 onChange={handleSliderChange}
                 className="slider"
               />
-              <p>Slider Value: {sliderValue}</p>
+
+            <p>Resize aERs</p>
+              <input
+                type="range"
+                min={0}
+                max={20}
+                value={aERSliderValue}
+                onChange={handleSliderChange2}
+                className="slider"
+              />
+
+            <p>Resize iERs</p>
+              <input
+                type="range"
+                min={0}
+                max={20}
+                value={iERSliderValue}
+                onChange={handleSliderChange3}
+                className="slider"
+              />
+              
+            <p>Resize rERs</p>
+              <input
+                type="range"
+                min={0}
+                max={20}
+                value={rERSliderValue}
+                onChange={handleSliderChange4}
+                className="slider"
+              />
+
+              <p>Resize Atomic ERs</p>
+              <input
+                type="range"
+                min={0}
+                max={20}
+                value={atomicSliderValue}
+                onChange={handleSliderChange5}
+                className="slider"
+              />
+
             </div>
+
+            
 
 
 
