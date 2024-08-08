@@ -1,4 +1,21 @@
+
+
+.home,
+.reports,
+.products {
+  display: flex;
+  height: 90vh;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+}
+
+
 .App {
+  box-sizing: border-box;
+  margin: 10;
+  padding: 10;
+  font-family: 'Lato', sans-serif;
   text-align: center;
 }
 
@@ -35,4 +52,18 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.navbar {
+  margin-top: 20px;
+  margin-left: 26px;
+  background-color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.buttons{
+  margin: 0 auto;
+
 }
