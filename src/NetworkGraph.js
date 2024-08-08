@@ -652,43 +652,6 @@ const NetworkGraph = () => {
             if (!existingLink) {
                 currLN.comesAfter = d.id
 
-                // if (currLN.shape === 'Atomic ER' && (d.shape === 'diamond' || d.shape === 'Atomic ER')) {
-                //     currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
-                // } else if (currLN.shape === 'Atomic ER' && d.shape === 'iER') {
-                //     currLN.isPartOf = d.id
-                // } else if (currLN.shape === 'Atomic ER' && d.shape === 'aER') {
-                //     currLN.isPartOf = d.id
-                // } else if (currLN.shape === 'Atomic ER' && d.shape === 'rER') {
-                //     // setLinkingMessage('Atomic ER cannot link with rER');
-                //     // setTimeout(() => setLinkingMessage(''), 2000);
-                //     currLN.isPartOf = d.id
-                // } else if (currLN.shape === 'diamond' && d.shape === 'Atomic ER') {
-                //     currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
-                // } else if (currLN.shape === 'iER' && d.shape === 'Atomic ER') {
-                //     d.isPartOf = currLN.id
-                // } else if (currLN.shape === 'iER' && d.shape === 'aER') {
-                //     d.isPartOf = currLN.id
-                // } else if (currLN.shape === 'iER' && d.shape === 'rER') {
-                //     // setLinkingMessage('iER cannot link with rER');
-                //     // setTimeout(() => setLinkingMessage(''), 2000);
-                //     currLN.comesAfter = d.id
-                // } else if (currLN.shape === 'iER' && d.shape === 'diamond') {
-                //     currLN.comesAfter ? d.comesAfter = currLN.id : currLN.comesAfter = d.id
-                // } else if (currLN.shape === 'aER' && d.shape === 'iER') {
-                //     currLN.comesAfter = d.id
-                // } else if (currLN.shape === 'aER' && d.shape === 'rER') {
-                //     d.assesses = currLN.id
-                // } else if (currLN.shape === 'rER' && d.shape === 'aER') {
-                //     currLN.assesses = d.id
-                // } else if (currLN.shape === 'rER' && d.shape !== 'aER') {
-                //     // setLinkingMessage('Only aER can be linked with rER');
-                //     // setTimeout(() => setLinkingMessage(''), 2000);
-                //     currLN.assesses = d.id
-                // } else {
-                //     setLinkingMessage('Linking between selected nodes is not allowed');
-                //     setTimeout(() => setLinkingMessage(''), 2000);
-                // }
-
                 setNodes([...nodes]);
                 // setLinks(prevLinks => [...prevLinks, { source: currentLinkingNode, target: d, type: 'Comes After' }]);
             }
@@ -944,17 +907,17 @@ const NetworkGraph = () => {
                     </label>
                     <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
                     <Button id='recenterButton' variant="outlined">Recenter</Button>
+                    <FormControlLabel sx={{ marginLeft: '2px' }}
+                        control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
+                        label={`${labelsToggled ? 'Hide' : 'Show'} Labels`}
+                    />
+                    <FormControlLabel sx={{ marginLeft: '2px' }}
+                        control={<Switch size="small" checked={legendToggled} onChange={() => setLegendToggled(!legendToggled)} />}
+                        label={`${legendToggled ? 'Hide' : 'Show'} Legend`}
+                    />
                 </div>
                 {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
 
-                <FormControlLabel sx={{ marginLeft: '2px' }}
-                    control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
-                    label={`${labelsToggled ? 'Hide' : 'Show'} Labels`}
-                />
-                <FormControlLabel sx={{ marginLeft: '2px' }}
-                    control={<Switch size="small" checked={legendToggled} onChange={() => setLegendToggled(!legendToggled)} />}
-                    label={`${legendToggled ? 'Hide' : 'Show'} Legend`}
-                />
                 <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
                     <InputLabel>Views</InputLabel>
                     <Select
