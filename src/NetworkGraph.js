@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { Button, Typography } from '@mui/material';
+import { Alert, Button, FormControlLabel, FormGroup, Switch, Typography } from '@mui/material';
 import { MenuItem, Select, FormControl, InputLabel } from '@mui/material';
-import { Add } from '@mui/icons-material';
-import NodePopover from './NodePopover'; // Adjust import path as per your project structure
-import LinkPopover from './LinkPopover'; // Adjust import path as per your project structure
+import { Add, ErrorOutline, Visibility } from '@mui/icons-material';
+import NodePopover from './NodePopover';
+import LinkPopover from './LinkPopover';
+import Navbar from './Navbar';
+import { useSlider } from './SliderContext';
 
-const width = window.innerWidth * 0.9,
-    height = 600,
-    radius = 15;
+
 
 const NetworkGraph = () => {
+    let width = window.innerWidth * 0.9,
+        height = window.innerHeight * 0.9;
     const initialNodes = [
         { id: 0, name: 'start', shape: 'diamond', size: 10, color: 'green', fx: 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null }, // Fixed position for start node
         { id: 54321, name: 'end', shape: 'diamond', size: 10, color: 'green', fx: width - 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
@@ -24,14 +26,18 @@ const NetworkGraph = () => {
     const [anchorElNode, setAnchorElNode] = useState(null);
     const [anchorElLink, setAnchorElLink] = useState(null);
     const [linkingNode, setLinkingNode] = useState(null);
-    // const [nodeMap, setNodeMap] = useState(new Map());
+    const [legendToggled, setLegendToggled] = useState(false);
+    const [labelsToggled, setLabelsToggled] = useState(false);
     const [linkingMessage, setLinkingMessage] = useState('');
     const [filterType, setFilterType] = useState('3');
     const [hoveredNode, setHoveredNode] = useState(null);
+    const [isAlertError, setIsAlertError] = useState(false);
     const svgRef = useRef(null);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
     const linkingNodeRef = useRef(linkingNode);
+    const { sliderValue, setSliderValue, aERSliderValue, setaERSliderValue, iERSliderValue, setIERSliderValue, rERSliderValue, setrERSliderValue, atomicSliderValue, setatomicSliderValue } = useSlider();
 
+    const radius = 15;
     useEffect(() => {
         linkingNodeRef.current = linkingNode;
     }, [linkingNode]);
@@ -40,6 +46,80 @@ const NetworkGraph = () => {
         const newLinks = processLinks(nodes.filter(n => !n.hidden));
         setLinks(newLinks);
     }, [nodes]);
+
+    // Use Effects for SLides Node Resizing:
+
+    useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+            if (node.shape !== 'diamond') {
+                return { ...node, size: sliderValue }; // Update size for non-diamond nodes
+            }
+            return node; // Keep diamond nodes unchanged
+        });
+
+        setNodes(updatedNodes);
+    }, [sliderValue]); // Dependency on sliderValue 
+
+    useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+            if (node.shape !== 'diamond') {
+                return { ...node, size: sliderValue }; // Update size for non-diamond nodes
+            }
+            return node; // Keep diamond nodes unchanged
+        });
+
+        setNodes(updatedNodes);
+    }, [sliderValue]); // Dependency on sliderValue 
+
+    useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+            if (node.shape == 'aER') {
+                return { ...node, size: aERSliderValue }; // Update size for non-diamond nodes
+            }
+            return node; // Keep diamond nodes unchanged
+        });
+
+        setNodes(updatedNodes);
+    }, [aERSliderValue]); // Dependency on aERSliderValue
+
+    useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+            if (node.shape == 'iER') {
+                return { ...node, size: iERSliderValue }; // Update size for non-diamond nodes
+            }
+            return node; // Keep diamond nodes unchanged
+        });
+
+        setNodes(updatedNodes);
+    }, [iERSliderValue]); // Dependency on aERSliderValue
+
+    useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+            if (node.shape == 'rER') {
+                return { ...node, size: rERSliderValue }; // Update size for non-diamond nodes
+            }
+            return node; // Keep diamond nodes unchanged
+        });
+
+        setNodes(updatedNodes);
+    }, [rERSliderValue]); // Dependency on aERSliderValue
+
+    useEffect(() => {
+        // Update nodes sizes with slider
+        const updatedNodes = nodes.map(node => {
+            if (node.shape == 'Atomic ER') {
+                return { ...node, size: atomicSliderValue }; // Update size for non-diamond nodes
+            }
+            return node; // Keep diamond nodes unchanged
+        });
+
+        setNodes(updatedNodes);
+    }, [atomicSliderValue]); // Dependency on aERSliderValue
 
     const handleKeyDown = (event) => {
         if ((event.key === 'Delete' || event.key === '-') && selectedNode) {
@@ -63,6 +143,9 @@ const NetworkGraph = () => {
 
     useEffect(() => {
         const svg = d3.select(svgRef.current);
+        height = svg.node().getBoundingClientRect().height * 0.9;
+        width = svg.node().getBoundingClientRect().width * 0.9;
+
         const ticked = () => {
 
             svg.selectAll('.node')
@@ -71,17 +154,12 @@ const NetworkGraph = () => {
                 .attr("cy", (d) => { return d.y = Math.max(radius, Math.min(height - radius, d.y)); });
 
 
-            // let dimensions = new Map();
             svg.selectAll('.nodeShape')
                 .attr('d', d => getShapePath(d.shape)) // Update node shape path
                 .attr('fill', d => d.color || color(d.type))
                 .attr('transform', d => `scale(${getNodeScale(d.size)})`);
 
             svg.selectAll('.link')
-                // .attr("x1", d => d.source.x)
-                // .attr("y1", d => d.source.y)
-                // .attr("x2", d => d.target.x)
-                // .attr("y2", d => d.target.y)
                 .attr("points", d => (d.source.fx || d.source.x) + "," + (d.source.fy || d.source.y) + " " +
                     ((d.source.fx || d.source.x) + (d.target.fx || d.target.x)) / 2 + "," + ((d.source.fy || d.source.y) + (d.target.fy || d.target.y)) / 2 + " " +
                     (d.target.fx || d.target.x) + "," + (d.target.fy || d.target.y))
@@ -109,38 +187,69 @@ const NetworkGraph = () => {
                             return '#df0d0d';
                     }
                 })
+                .attr('orient', d => {
+                    switch (d.type) {
+                        case 'Assesses':
+                            return 'auto';
+                        case 'Comes After':
+                            return '1';
+                        case 'Is Part Of':
+                            return 'auto';
+                        default:
+                            return 'auto';
+                    }
+                }); // for correcting the orientation of the marker
+
             svg.selectAll('.nodeLabel')
                 .text(d => d.name) // Update node's label text
                 .attr('style', 'font-weight: bold; font-size: 8px;')
 
 
             // ** WIP ** 
-            // svg.selectAll('.edgepath').attr('d', (d) => (
-            //     `M ${d.source.x} ${d.source.y} L ${d.target.x} ${d.target.y}`
-            // ));
+            const distance = 10;
+            svg.selectAll('.edgepath').attr('d', (d) => {
+                let x1 = d.source.x - (distance * Math.sin(Math.atan2(d.source.y - d.target.y, d.source.x - d.target.x)));
+                let y1 = d.source.y + (distance * Math.cos(Math.atan2(d.source.y - d.target.y, d.source.x - d.target.x)));
+                let x2 = d.target.x - (distance * Math.sin(Math.atan2(d.source.y - d.target.y, d.source.x - d.target.x)));
+                let y2 = d.target.y + (distance * Math.cos(Math.atan2(d.source.y - d.target.y, d.source.x - d.target.x)));
+                return `M ${x1} ${y1} L ${x2} ${y2}`
+            });
 
-            // svg.selectAll('edgelabel').attr('transform', function (d) {
-            //     let bbox = this.getBBox();
+            svg.selectAll('.edgelabel').attr('transform', function (d) {
+                let bbox = this.getBBox();
 
-            //     let rx = bbox.x + bbox.width / 2;
-            //     let ry = bbox.y + bbox.height / 2;
-            //     return 'rotate(180 ' + rx + ' ' + ry + ')';
+                let rx = bbox.x + bbox.width / 2;
+                let ry = bbox.y + bbox.height / 2;
+                return 'rotate(180 ' + rx + ' ' + ry + ')';
 
-            // });
+            })
+                .attr('visibility', labelsToggled ? 'visible' : 'hidden');
         };
 
         // Create a zoom behavior
 
-        // const zoom = d3.zoom()
-        //     .scaleExtent([0.5, 5]) // Set the zoom scale limits
-        //     .on('zoom', (event) => {
-        //         svg.select('g').attr('transform', event.transform);
-        //     });
-        // svg.call(zoom);
-        
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 5]) // Set the zoom scale limits
+            .on('zoom', (event) => {
+                svg.select('#main').attr('transform', event.transform);
+                svg.call(function (d) {
+                    svg.style("cursor", "grabbing");
+                });
+            })
+            .on('end', () => {
+                const recenterButton = document.getElementById('recenterButton');
+                recenterButton.addEventListener('click', () => {
+                    svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity);
+                });
+                svg.call(function (d) {
+                    svg.style("cursor", "default");
+                });
+            });
+        svg.call(zoom);
+
 
         // Function to create a force that keeps nodes at a fixed vertical position
-    const verticalForce = (nodes, strength) => {
+        const verticalForce = (nodes, strength) => {
             return (alpha) => {
                 nodes.forEach(node => {
                     if (node.comesAfter !== null && node.comesAfter !== undefined) {
@@ -152,16 +261,18 @@ const NetworkGraph = () => {
         };
 
         const simulation = d3.forceSimulation(nodes.filter(n => !n.hidden))
-            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(100)) // Link force
+            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(85)) // Link force
             .force('charge', d3.forceManyBody().strength(-2000).distanceMax(175).distanceMin(0.01)) // Charge force to repel nodes
             .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
             .force('y', verticalForce(nodes, 1)) // Custom vertical force
             .on('tick', ticked);
 
+
+        const defaultMarkers = [{ type: 'Assesses', source: { id: -1 }, target: { id: -1 } }, { type: 'Comes After', source: { id: -2 }, target: { id: -2 } }, { type: 'Is Part Of', source: { id: -3 }, target: { id: -3 } }]
         const marker = svg.select("defs")
             .selectAll(".markerDef")
             // Assign a marker per link, instead of one per class.
-            .data(links.filter(l => !l.hidden), function (d) { return d.source.id + "-" + d.target.id; });
+            .data(() => { let tmp = links.filter(l => !l.hidden); tmp.push(...defaultMarkers); return tmp }, function (d) { return d.source.id + "-" + d.target.id; });
         marker.exit().remove();
         const markerEnter = marker
             .enter()
@@ -197,7 +308,47 @@ const NetworkGraph = () => {
             .append("path")
             .attr("d", "M0,-5L10,0L0,5");
 
-        const link = svg.select('g').selectAll('.link')
+        const legendRect = svg.select('#legend').select('rect')
+            .attr('x', width - 330)
+            .attr('y', height - 130)
+            .attr('width', 200)
+            .attr('height', 100)
+            .style('fill', 'white')
+            .style('opacity', 0.8)
+            .style('stroke', 'lightgrey')
+        const legendLinks = svg.select('#legend').selectAll('.linkLegend')
+            .data(...[defaultMarkers])
+        const legendText = svg.select('#legend').selectAll('text')
+            .data(...[defaultMarkers])
+
+        legendText.exit().remove();
+        legendLinks.exit().remove();
+
+        const legendLinksEnter = legendLinks.enter().append('polyline')
+            .attr('class', 'linkLegend')
+            .attr('stroke', d => {
+                switch (d.type) {
+                    case 'Assesses':
+                        return 'lightblue';
+                    case 'Comes After':
+                        return 'red';
+                    case 'Is Part Of':
+                        return 'grey';
+                }
+            })
+            .attr('points', (d, i) => {
+                return `${width - 325},${height - 105 + (i * 20)} ${width - 255},${height - 105 + (i * 20)} ${width - 185},${height - 105 + (i * 20)}`
+            })
+            .attr("marker-mid", function (d) { return "url(#" + (d.source.id + "-" + d.target.id).replace(/\s+/g, '') + ")"; });
+
+        const legendTextEnter = legendText.enter().append('text')
+            .attr("x", width - 182)
+            .attr("y", (d, i) => {
+                return `${height - 103 + (i * 20)}`
+            })
+            .text((d) => d.type)
+            .style('font-size', 9);
+        const link = svg.select('#main').selectAll('.link')
             .data(links.filter(l => !l.hidden), d => `${d.source.id}-${d.target.id}`);
 
         link.exit().remove();
@@ -218,40 +369,40 @@ const NetworkGraph = () => {
                 }
             })
             .attr("marker-mid", function (d) { return "url(#" + (d.source.id + "-" + d.target.id).replace(/\s+/g, '') + ")"; })
-        // ** WIP ** 
-        // .append("title").text(function (d) { return d.type; });
 
-        // const edgepaths = svg.selectAll(".edgepath")
-        //     .data(links.filter(l => !l.hidden), function (d) { return d ? `p${d.source.id}-${d.target.id}` : this.id });
-        // edgepaths.exit().remove();
-        // const edgPathEnter = edgepaths.enter()
-        //     .append('path')
-        //     .attr('class', 'edgepath')
-        //     .attr('fill-opacity', 0)
-        //     .attr('stroke-opacity', 0)
-        //     .attr('id', (d, i) => 'edgepath' + i)
-        //     .style("pointer-events", "none");
+        const edgepaths = svg.select('#main').selectAll(".edgepath")
+            .data(links.filter(l => !l.hidden), function (d) { return d ? `p${d.source.id}-${d.target.id}` : this.id });
+        edgepaths.exit().remove();
+        const edgPathEnter = edgepaths.enter()
+            .append('path')
+            .attr('class', 'edgepath')
+            .attr('fill-opacity', 0)
+            .attr('stroke-opacity', 0)
+            .attr('id', (d, i) => 'edgepath' + i)
+            .style("pointer-events", "none");
 
 
-        // const edgelabels = svg.selectAll(".edgelabel")
-        //     .data(links.filter(l => !l.hidden), function (d) { return d ? `l${d.source.id}-${d.target.id}` : this.id });
-        // edgelabels.exit().remove();
-        // const enterEdgLabels = edgelabels
-        //     .enter()
-        //     .append('text')
-        //     .style("pointer-events", "none")
-        //     .attr('class', 'edgelabel')
-        //     .attr('id', (d, i) => 'edgelabel' + i)
-        //     .attr('font-size', 10)
-        //     .attr('fill', '#aaa')
-        //     .append('textPath')
-        //     .attr('xlink:href', (d, i) => '#edgepath' + i)
-        //     .style("text-anchor", "middle")
-        //     .style("pointer-events", "none")
-        //     .attr("startOffset", "50%")
-        //     .text(d => d.type);
+        const edgelabels = svg.select('#main').selectAll(".edgelabel")
+            .data(links.filter(l => !l.hidden), function (d) { return d ? `l${d.source.id}-${d.target.id}` : this.id });
+        edgelabels.exit().remove();
+        const enterEdgLabels = edgelabels
+            .enter()
+            .append('text')
+            .style("pointer-events", "none")
+            .attr('class', 'edgelabel')
+            .attr('id', (d, i) => 'edgelabel' + i)
+            .attr('fill', '#aaa')
+            .append('textPath')
+            .attr('font-size', 9)
+            .style('stroke', 'black')
+            .style('stroke-width', 0.3)
+            .attr('xlink:href', (d, i) => '#edgepath' + i)
+            .style("text-anchor", "middle")
+            .style("pointer-events", "none")
+            .attr("startOffset", "50%") // Adjust the startOffset value to move the edgeLabels further from the edgepath
+            .text(d => d.type);
 
-        const node = svg.select('g').selectAll('.node')
+        const node = svg.select('#main').selectAll('.node')
             .data(nodes.filter(n => !n.hidden), d => d.id);
 
 
@@ -378,10 +529,12 @@ const NetworkGraph = () => {
             svg.selectAll('.node').remove();
             svg.selectAll('.link').remove();
             svg.selectAll('.markerDef').remove();
+            svg.selectAll('.edgepath').remove();
+            svg.selectAll('.edgelabel').remove();
             simulation.stop(); // Stop simulation on component unmount
         };
 
-    }, [links]);
+    }, [links, legendToggled, labelsToggled]);
 
     const handleCloseNode = () => {
         setSelectedNode(null);
@@ -557,8 +710,15 @@ const NetworkGraph = () => {
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const text = e.target.result;
-                parseCSV(text);
+                try {
+                    const text = e.target.result;
+                    parseCSV(text);
+                } catch (error) {
+                    // Display error popup
+                    setIsAlertError(true);
+                    //set back to false after 5 seconds
+                    setTimeout(() => setIsAlertError(false), 5000);
+                }
             };
             reader.readAsText(file);
         }
@@ -583,7 +743,7 @@ const NetworkGraph = () => {
         })
 
         //   Remove nodes with title "start" or "end" (case insensitive)
-         parsedData = parsedData.filter(node => {
+        parsedData = parsedData.filter(node => {
             const title = node.name ? node.name.toLowerCase() : '';
             return title !== 'start' && title !== 'end';
         });
@@ -711,41 +871,9 @@ const NetworkGraph = () => {
             };
         });
         setNodes([...updatedNodes]);
-        // const newLinks = filterType ? processLinks(nodes.filter(n => !n.hidden)) : [];
-        // setLinks(newLinks);
-        // handleFilterLinks(filterType);
 
     };
 
-    // const handleFilterLinks = (filterType) => {
-    //     const updatedLinks = links.map(link => {
-    //         let hidden = false;
-
-    //         switch (filterType) {
-    //             case "1":
-    //                 hidden = (link.source.shape === 'iER' || link.source.shape === 'Atomic ER' || link.target.shape === 'Atomic ER' || link.target.shape === 'iER');
-    //                 break;
-    //             case "2":
-    //                 hidden = (link.source.shape === 'Atomic ER' || link.target.shape === 'Atomic ER');
-    //                 break;
-    //             case "3":
-    //                 hidden = false; // Show all links
-    //                 break;
-    //             case "4":
-    //                 // Implement your logic for View 4
-    //                 break;
-    //             default:
-    //                 hidden = false;
-    //         }
-
-    //         return {
-    //             ...link,
-    //             hidden
-    //         };
-    //     });
-
-    //     setLinks(updatedLinks); // Update state for links
-    // };
 
     const handleNodeHover = (event, d) => {
         // Set the hovered node in state
@@ -770,40 +898,83 @@ const NetworkGraph = () => {
             .classed('clicked', d => d === selectedLinkId);
     }
 
+    function downloadCSV() {
+        let csvContent = "ID,name,alternative title,target URL,type,isPartOf,assesses,comesAfter\n";
+        nodes.forEach(node => {
+            if (node.alternativeTitle == undefined) {
+                node.alternativeTitle = ""
+            }
+            if (node.targetURL == undefined) {
+                node.targetURL = ""
+            }
+            csvContent += `${node.id},${node.name},${node.alternativeTitle},${node.targetURL},${node.type},${node.isPartOf || ""},${node.assesses || ""},${node.comesAfter || ""}\n`;
+        });
+
+        let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        let link = document.createElement("a");
+        if (link.download !== undefined) {
+            let url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "network_data.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+
+
+
     return (
         <div>
-            <input
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                style={{ display: 'none' }}
-                id="csv-upload"
-            />
-            <label htmlFor="csv-upload">
-                <Button variant="contained" component="span">
-                    Upload CSV
-                </Button>
-            </label>
-            <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
-            {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
-            <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
-                <InputLabel>Views</InputLabel>
-                <Select
-                    value={filterType}
-                    onChange={(e) => {
-                        setFilterType(e.target.value);
-                        handleFilterNodes(e.target.value);
-                    }}
-                    label="View"
-                >
-                    <MenuItem value="1">View 1: Summative assessment only</MenuItem>
-                    <MenuItem value="2">View 2: Course Overview</MenuItem>
-                    <MenuItem value="3">View 3: All ERs</MenuItem>
-                    <MenuItem value="4">View 4: Requirements</MenuItem>
-                </Select>
-            </FormControl>
-            <svg ref={svgRef} width='100%' height='80vh' viewBox={`0 0 ${width} ${height}`}>
-                <g></g>
+            <div className='navbar'>
+                <Navbar onAction={downloadCSV} />
+                <div className='buttons'>
+                    <input
+                        type="file"
+                        accept=".csv"
+                        onChange={handleFileUpload}
+                        style={{ display: 'none' }}
+                        id="csv-upload"
+                    />
+                    <label htmlFor="csv-upload">
+                        <Button variant="contained" component="span">
+                            Upload CSV
+                        </Button>
+                    </label>
+                    <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
+                    <Button id='recenterButton' variant="outlined">Recenter</Button>
+                </div>
+                {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
+
+                <FormControlLabel sx={{ marginLeft: '2px' }}
+                    control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
+                    label={`${labelsToggled ? 'Hide' : 'Show'} Labels`}
+                />
+                <FormControlLabel sx={{ marginLeft: '2px' }}
+                    control={<Switch size="small" checked={legendToggled} onChange={() => setLegendToggled(!legendToggled)} />}
+                    label={`${legendToggled ? 'Hide' : 'Show'} Legend`}
+                />
+                <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
+                    <InputLabel>Views</InputLabel>
+                    <Select
+                        value={filterType}
+                        onChange={(e) => {
+                            setFilterType(e.target.value);
+                            handleFilterNodes(e.target.value);
+                        }}
+                        label="View"
+                    >
+                        <MenuItem value="1">View 1: Summative assessment only</MenuItem>
+                        <MenuItem value="2">View 2: Course Overview</MenuItem>
+                        <MenuItem value="3">View 3: All ERs</MenuItem>
+                        <MenuItem value="4">View 4: Requirements</MenuItem>
+                    </Select>
+                </FormControl>
+            </div>            <svg ref={svgRef} width='100%' height='100%' viewBox={`0 0 ${width} ${height}`}>
+                <g id='main'>
+                </g>
+                {legendToggled && (<g id='legend'><rect></rect></g>)}
                 <defs></defs>
             </svg>
             {linkingMessage && (
@@ -850,6 +1021,9 @@ const NetworkGraph = () => {
 
                 />
             )}
+            {isAlertError && <Alert icon={<ErrorOutline fontSize="inherit" />} severity="error">
+                There was an error processing the file. Please try again.
+            </Alert>}
         </div>
     );
 };
