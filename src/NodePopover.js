@@ -27,6 +27,7 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
 
     const handleSizeOptionChange = (event) => {
         const newSize = +event.target.value;
+        console.log(newSize)
         handleSizeChange(newSize);
     };
 

@@ -146,7 +146,9 @@ const NetworkGraph = () => {
 
     const handleKeyUp = (event) => {
         if (event.key === 'Shift') {
+            setAnchorElMultiNode(event.currentTarget); 
             setShiftPressed(false);
+        
         }
     };
 
@@ -565,17 +567,13 @@ const NetworkGraph = () => {
             setNodes([...nodes]); // Trigger re-render to update node size
             setAnchorElNode(selectedNode)
         }
-        if (selectedNodes && selectedNodes.length > 0) {
-            // Multiple nodes size change
-            const updatedNodes = nodes.map(n => {
-                // If the node is in the selectedNodes array, update its size
-                if (selectedNodes.find(selected => selected.id === n.id)) {
-                    return { ...n, size: newSize };
-                }
-                return n;
-            });
-            setNodes(updatedNodes);
-            // setAnchorElMultiNode(null); // Clear popover or update accordingly
+        else if (selectedNodes && selectedNodes.length > 0) {
+            for(var i of selectedNodes){
+               console.log(i)
+                i.size = newSize
+            }
+            setNodes([...nodes]);
+           
         }
     };
     const handleTypeChange = (newType) => {
@@ -645,16 +643,16 @@ const NetworkGraph = () => {
     };
 
     function nodeClicked(event, d) {
-        if(shiftRef.current){
+        if(shiftRef.current){  
             setSelectedNodes(prevNodes => {
                 const newNodes = [...prevNodes, d];
 
  // Show popover if more than one node is selected
- if (newNodes.length > 1) {
-    setAnchorElMultiNode(event.currentTarget); // Set the popover anchor to the event target
-} else {
-    setAnchorElMultiNode(null); // Hide popover if only one node is selected
-}
+//  if (newNodes.length > 1 && shiftRef.current == false) {
+//     setAnchorElMultiNode(event.currentTarget); // Set the popover anchor to the event target
+// } else {
+//     setAnchorElMultiNode(null); // Hide popover if only one node is selected
+// }
 
                 updateNodeBorders(newNodes);
                 return newNodes;
