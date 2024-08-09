@@ -216,14 +216,12 @@ const NetworkGraph = () => {
             });
 
             svg.selectAll('.edgelabel').attr('transform', function (d) {
-                let bbox = this.getBBox();
 
-                let rx = bbox.x + bbox.width / 2;
-                let ry = bbox.y + bbox.height / 2;
-                return 'rotate(180 ' + rx + ' ' + ry + ')';
+                let x = (d.source.x + d.target.x) / 2;
+                let y = (d.source.y + d.target.y) / 2;
+                return 'rotate( ' + (d.source.x > d.target.x ? 180 : 0) + ', ' + x + ', ' + y + ')';
 
-            })
-                .attr('visibility', labelsToggled ? 'visible' : 'hidden');
+            }).attr('visibility', labelsToggled ? 'visible' : 'hidden');
         };
 
         // Create a zoom behavior
@@ -259,7 +257,8 @@ const NetworkGraph = () => {
                 });
             };
         };
-
+        // todo: filter based on ER type and selected view/FilterType (maybe eligibilty function type switching)
+        // maybe also add ids to links so u kno which ones to keep -- might have to change the way links are stored (temporary view ones and permanent ones)
         const simulation = d3.forceSimulation(nodes.filter(n => !n.hidden))
             .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(85)) // Link force
             .force('charge', d3.forceManyBody().strength(-2000).distanceMax(175).distanceMin(0.01)) // Charge force to repel nodes
