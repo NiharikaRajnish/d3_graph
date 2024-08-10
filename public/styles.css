@@ -1,5 +1,5 @@
-.link {
-   
+.link, .linkLegend {
+
     stroke-opacity: 0.6;
     stroke-width: 3;
 }
