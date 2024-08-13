@@ -4,6 +4,7 @@
     stroke-width: 3;
 }
 
+
 .link.clicked {
     stroke: black; /* Black stroke color when clicked */
     stroke-opacity: 1; /* Adjust opacity as needed */

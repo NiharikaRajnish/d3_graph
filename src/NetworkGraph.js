@@ -6,7 +6,8 @@ import { Add, ErrorOutline, Visibility } from '@mui/icons-material';
 import NodePopover from './NodePopover';
 import LinkPopover from './LinkPopover';
 import Navbar from './Navbar';
-import { useSlider } from './SliderContext';
+import { useSlider } from './SliderContext'; 
+import exportSvg from './ExportSvg'; // Import the function
 
 
 
@@ -22,8 +23,11 @@ const NetworkGraph = () => {
     const [nodes, setNodes] = useState(initialNodes);
     const [links, setLinks] = useState(initialLinks);
     const [selectedNode, setSelectedNode] = useState(null);
+    const [shiftPressed, setShiftPressed] = useState(false);
+    const [selectedNodes, setSelectedNodes] = useState([0]);
     const [selectedLink, setSelectedLink] = useState(null);
     const [anchorElNode, setAnchorElNode] = useState(null);
+    const [anchorElMultiNode, setAnchorElMultiNode] = useState(null);
     const [anchorElLink, setAnchorElLink] = useState(null);
     const [linkingNode, setLinkingNode] = useState(null);
     const [legendToggled, setLegendToggled] = useState(false);
@@ -35,9 +39,15 @@ const NetworkGraph = () => {
     const svgRef = useRef(null);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
     const linkingNodeRef = useRef(linkingNode);
-    const { sliderValue, setSliderValue, aERSliderValue, setaERSliderValue, iERSliderValue, setIERSliderValue, rERSliderValue, setrERSliderValue, atomicSliderValue, setatomicSliderValue } = useSlider();
+    const { sliderValue, setSliderValue, aERSliderValue ,setaERSliderValue,iERSliderValue,setIERSliderValue,rERSliderValue, setrERSliderValue,atomicSliderValue, setatomicSliderValue} = useSlider();
+    const shiftRef = useRef(shiftPressed);
+
 
     const radius = 15;
+    useEffect(() => {
+        shiftRef.current = shiftPressed;
+    }, [shiftPressed]);
+    
     useEffect(() => {
         linkingNodeRef.current = linkingNode;
     }, [linkingNode]);
@@ -122,6 +132,7 @@ const NetworkGraph = () => {
     }, [atomicSliderValue]); // Dependency on aERSliderValue
 
     const handleKeyDown = (event) => {
+
         if ((event.key === 'Delete' || event.key === '-') && selectedNode) {
             handleRemoveNode();
         } else if ((event.key === 'Delete' || event.key === '-') && selectedLink) {
@@ -131,13 +142,29 @@ const NetworkGraph = () => {
         } else if (event.key === '+' && selectedNode && !selectedLink) {
             handleAddLink();
         }
+        if(event.key === 'Shift'){
+            setShiftPressed(true)
+        
+        }
+        
     };
+
+    const handleKeyUp = (event) => {
+        if (event.key === 'Shift') {
+            setAnchorElMultiNode(event.currentTarget); 
+            setShiftPressed(false);
+        
+        }
+    };
+
     useEffect(() => {
 
         document.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
 
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
         };
     }, [nodes, links, selectedLink, selectedNode]);
 
@@ -460,7 +487,13 @@ const NetworkGraph = () => {
         simulation.force('link').links(links);
         simulation.alpha(0.3).restart(); // Use a lower alpha value to minimize layout disruptions
 
-        updateNodeBorders(selectedNode ? selectedNode.id : null); // Update node borders initially
+        if(shiftRef.current == false){
+
+         updateNodeBorders(selectedNode ? [selectedNode] : [0]); // Update node borders initially
+        }
+        else{
+            updateNodeBorders(selectedNodes)
+        }
 
         function dragStarted(event, d) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -493,7 +526,7 @@ const NetworkGraph = () => {
             updateLinkBorders(d.id); // Update link borders
 
             // Deselect any previously clicked node
-            updateNodeBorders(null);
+            // updateNodeBorders([]);
 
             // Select the clicked link and apply the 'clicked' class
             d3.select(event.target).classed('clicked', true);
@@ -537,8 +570,11 @@ const NetworkGraph = () => {
 
     const handleCloseNode = () => {
         setSelectedNode(null);
+        setSelectedNodes([])
         setAnchorElNode(false);
-        updateNodeBorders(null);
+        // if(shiftRef.current == false){
+        // updateNodeBorders([]);
+        // }
         setLinkingMessage('');
     };
     const handleCloseLink = () => {
@@ -546,7 +582,7 @@ const NetworkGraph = () => {
         setSelectedLink(null);
         setAnchorElLink(false);
         updateLinkBorders(null);
-        updateNodeBorders(null);
+        // updateNodeBorders([]);
         setLinkingMessage('');
     };
 
@@ -572,6 +608,34 @@ const NetworkGraph = () => {
             setNodes([...nodes]); // Trigger re-render to update node shape and color
             // setLinks([...links]);
         }
+        if(selectedNodes){
+            for(var i of selectedNodes){
+            i.shape = newShape;
+            switch (newShape) {
+                case 'Atomic ER':
+                    i.color = '#ADD8E6';
+                    break;
+                case 'aER':
+                    i.color = 'orange';
+                    i.stroke ="black";
+
+                    break;
+                case 'iER':
+                    i.color = 'red';
+                    i.stroke ="black";
+                    break;
+                case 'rER':
+                    i.color = 'green';
+                    i.stroke ="black";
+                    break;
+                default:
+                    i.color = color('default');
+            }
+        }
+        setNodes([...nodes]); // Trigger re-render to update node shape and color
+    }
+
+        
     };
 
     const handleSizeChange = (newSize) => {
@@ -579,6 +643,14 @@ const NetworkGraph = () => {
             selectedNode.size = newSize;
             setNodes([...nodes]); // Trigger re-render to update node size
             setAnchorElNode(selectedNode)
+        }
+        else if (selectedNodes && selectedNodes.length > 0) {
+            for(var i of selectedNodes){
+               console.log(i)
+                i.size = newSize
+            }
+            setNodes([...nodes]);
+           
         }
     };
     const handleTypeChange = (newType) => {
@@ -633,13 +705,38 @@ const NetworkGraph = () => {
             setNodes(nodes.filter(n => n.id !== nodeId));
             // setLinks(links.filter(l => l.source.id !== nodeId && l.target.id !== nodeId));
             setSelectedNode(null);
-        } else {
+        } 
+        else if(selectedNodes){
+            const selectedIds = selectedNodes.map(n => n.id);
+            setNodes(nodes.filter(n => !selectedIds.includes(n.id)));
+
+        }
+        
+        
+        else {
             setLinkingMessage('Select a node to delete');
             setTimeout(() => setLinkingMessage(''), 2000); // Clear the message after 2 seconds
         }
     };
 
     function nodeClicked(event, d) {
+        if(shiftRef.current){  
+            setSelectedNodes(prevNodes => {
+                const newNodes = [...prevNodes, d];
+
+ // Show popover if more than one node is selected
+//  if (newNodes.length > 1 && shiftRef.current == false) {
+//     setAnchorElMultiNode(event.currentTarget); // Set the popover anchor to the event target
+// } else {
+//     setAnchorElMultiNode(null); // Hide popover if only one node is selected
+// }
+
+                updateNodeBorders(newNodes);
+                return newNodes;
+            });
+        }
+        else{
+            setSelectedNodes([]);
         const currLN = linkingNodeRef.current;
 
         if (currLN && currLN.id !== d.id) {
@@ -657,16 +754,18 @@ const NetworkGraph = () => {
 
             setLinkingNode(null);
             setLinkingMessage('');
+        
         } else {
             setSelectedNode(d);
             setSelectedLink(null); // Deselect link if a node is clicked
             setAnchorElNode(d); // Set anchor for node popover
-            updateNodeBorders(d.id); // Add this line to update node borders
+            updateNodeBorders([d]); // Add this line to update node borders
 
             // Deselect any previously clicked link
             d3.selectAll('.link.clicked').classed('clicked', false);
         }
     }
+}
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (file) {
@@ -805,22 +904,130 @@ const NetworkGraph = () => {
         // Update nodes with hidden property based on filterType
         const updatedNodes = nodes.map(node => {
             let hidden = false;
-
             if (node.id === 0 || node.id === 54321) {
                 hidden = false; // Always show nodes with id 1 and 2
-            } else {
+            } 
+            else {
                 switch (filterType) {
                     case "1":
                         hidden = !(node.shape === 'aER' || node.shape === 'rER');
+                        // Find last node(connected to end) to use later
+
+    // Iterate backwards through the nodes array
+for (let i = nodes.length - 1; i >= 0; i--) {
+
+    const node = nodes[i];
+      // Find the previous aER node in the array
+      const prevAER = nodes.slice(0, i).reverse().find(n => n.shape === 'aER');
+
+
+    if(node.id == 54321){
+        if(prevAER ){
+        node.comesAfter = prevAER.id;
+        }
+    }
+
+    // Link all aER nodes together with a comesAfter relation
+    if (node.shape === 'aER') {
+        
+        // If there is a previous aER node, set the comesAfter property
+        if (prevAER) {
+            node.comesAfter = prevAER.id;
+        } 
+        else {
+            node.comesAfter = 0; // No previous aER, set to a default value
+        }
+    }
+}
+
+                
                         break;
                     case "2":
+                        //clear any modifications made to the dataset from View 1
+
+                        for(const i of nodes){
+                            if(i.shape == "aER" || i.id == 54321){
+                                if(i.id != 54321){
+                                i.comesAfter = null
+                                }
+                                else{
+                                    var node_id = i.comesAfter
+                                    var curr = nodes[node_id-3]
+                                    if( curr && curr.shape == "aER"){
+                                        i.comesAfter = null
+                                    }
+                                    for (let k = nodes.length - 1; k >= 0; k--){
+                                        let curr = nodes[k];
+                                        if(curr.shape == "iER"){
+                                            console.log(curr.id);
+                                            i.comesAfter = curr.id;
+                                            break;
+                                        }
+                                    }
+                                  
+                                }
+                            }
+                        }
                         hidden = node.shape == 'Atomic ER';
                         break;
                     case "3":
+                         //clear any modifications made to the dataset from View 1
+
+                         for(const i of nodes){
+                            if(i.shape == "aER" || i.id == 54321){
+                                if(i.id != 54321){
+                                i.comesAfter = null
+                                }
+                                else{
+                                    var node_id = i.comesAfter
+                                    var curr = nodes[node_id-3]
+                                    if( curr && curr.shape == "aER"){
+                                        i.comesAfter = null
+                                    }
+                                    for (let k = nodes.length - 1; k >= 0; k--){
+                                        let curr = nodes[k];
+                                        if(curr.shape == "iER"){
+                                            console.log(curr.id);
+                                            i.comesAfter = curr.id;
+                                            break;
+                                        }
+                                    }
+                                  
+                                }
+                            }
+                        }
+
                         hidden = false; // Show all nodes
                         break;
                     case "4":
-                        // Implement your logic for View 4
+
+                     //clear any modifications made to the dataset from View 1
+
+                     for(const i of nodes){
+                        if(i.shape == "aER" || i.id == 54321){
+                            if(i.id != 54321){
+                            i.comesAfter = null
+                            }
+                            else{
+                                var node_id = i.comesAfter
+                                var curr = nodes[node_id-3]
+                                if( curr && curr.shape == "aER"){
+                                    i.comesAfter = null
+                                }
+                                for (let k = nodes.length - 1; k >= 0; k--){
+                                    let curr = nodes[k];
+                                    if(curr.shape == "iER"){
+                                        console.log(curr.id);
+                                        i.comesAfter = curr.id;
+                                        break;
+                                    }
+                                }
+                              
+                            }
+                        }
+                    }
+
+
                         break;
                     default:
                         hidden = false;
@@ -847,11 +1054,23 @@ const NetworkGraph = () => {
         setHoveredNode(null);
     };
 
-    const updateNodeBorders = (selectedNodeId) => {
+    const updateNodeBorders = (selected) => {
+        if(shiftRef.current == true){
+                  // Apply black stroke to all selected nodes
+                  const selectedNodeIds = Object.values(selected).map(node => node.id);
+                  console.log(selectedNodeIds)
+                  d3.select(svgRef.current).selectAll('.nodeShape')
+                      .attr('stroke', d => (selectedNodeIds.includes(d.id) ? 'black' : 'none'))
+                      .attr('stroke-width', '0.5');
+    }
+        if(shiftRef.current == false && selected.length > 0){
+            const selectedNodeId = selected[0].id
         d3.select(svgRef.current).selectAll('.nodeShape')
             .attr('stroke', d => (d.id === selectedNodeId ? 'black' : 'none'))
             .attr('stroke-width', d => (d.id === selectedNodeId ? 0.5 : 0));
-    }
+        }
+        }
+ 
 
     const updateLinkBorders = (selectedLinkId) => {
         d3.select(svgRef.current).selectAll('.link')
@@ -885,12 +1104,14 @@ const NetworkGraph = () => {
         }
     }
 
-
+  function handleExportClick () {
+    exportSvg(svgRef.current, 'my-d3-graph.svg');
+  };
 
     return (
         <div>
             <div className='navbar'>
-                <Navbar onAction={downloadCSV} />
+                <Navbar onExportClick={handleExportClick} onDownloadCSV={downloadCSV}/>
                 <div className='buttons'>
                     <input
                         type="file"
@@ -957,7 +1178,7 @@ const NetworkGraph = () => {
             )}
 
             {selectedNode && (
-                console.log(anchorElNode),
+                // console.log(anchorElNode),
                 <NodePopover
                     id="node-popover"
                     open={Boolean(anchorElNode)}
@@ -965,12 +1186,31 @@ const NetworkGraph = () => {
                     onClose={handleCloseNode}
                     handleAddLink={handleAddLink}
                     selectedNode={selectedNode}
+                    selectedNodes={[]}
                     handleShapeChange={handleShapeChange}
                     handleSizeChange={handleSizeChange}
                     handleRenameNode={handleRenameNode}
                     handleRemoveNode={handleRemoveNode}
                 />
             )}
+
+{selectedNodes && (
+    //  console.log(anchorElMultiNode),
+                <NodePopover
+                    id="node-popover"
+                    open={Boolean(anchorElMultiNode)}
+                    anchorEl={anchorElMultiNode}
+                    onClose={handleCloseNode}
+                    handleAddLink={handleAddLink}
+                    selectedNode={""}
+                    selectedNodes={selectedNodes}
+                    handleShapeChange={handleShapeChange}
+                    handleSizeChange={handleSizeChange}
+                    handleRemoveNode={handleRemoveNode}
+                />
+            )}
+
+
             {selectedLink && (
                 <LinkPopover
                     id="link-popover"

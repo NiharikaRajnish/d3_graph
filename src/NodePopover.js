@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button, Popover, TextField } from '@mui/material';
 import { Link as LinkIcon, Remove } from '@mui/icons-material';
 
-const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode, handleShapeChange, handleSizeChange, handleRenameNode, handleRemoveNode }) => {
+const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode, selectedNodes , handleShapeChange, handleSizeChange, handleRenameNode, handleRemoveNode }) => {
     const [newName, setNewName] = useState(selectedNode?.name || '');
     
 
@@ -27,9 +27,11 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
 
     const handleSizeOptionChange = (event) => {
         const newSize = +event.target.value;
+        console.log(newSize)
         handleSizeChange(newSize);
     };
 
+if(selectedNode != ""){
     return (
         <Popover
             id={id}
@@ -67,6 +69,7 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
             >
                 Add Link
             </Button>
+
             <TextField
                 select
                 label="Type"
@@ -123,6 +126,80 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
             </Button>
         </Popover>
     );
+}
+else if(selectedNodes.length >1){
+     return (
+    <Popover
+    id={id}
+    open={open}
+    onClose={onClose}
+    anchorReference="anchorPosition"
+    anchorPosition={{ top: window.innerHeight - 100, left: window.innerWidth / 2 +50}}
+    anchorOrigin={{
+        vertical: 'bottom',
+        horizontal: 'center',
+    }}
+    transformOrigin={{
+        vertical: 'top',
+        horizontal: 'center',
+    }}
+    PaperProps={{
+        style: {
+            width: 'auto',
+            marginLeft: "5px",
+            marginRight: "5px",
+            height: 'auto',
+            padding: '10px',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '4px',
+        },
+    }}
+        >
+            <TextField
+                select
+                label="Type"
+                value={selectedNodes[selectedNodes.length-1]?.shape || 'circle'}
+                onChange={handleShapeOptionChange}
+                SelectProps={{
+                    native: true,
+                }}
+                margin="dense"
+                size="small"
+
+                style={{ marginLeft: '4px', marginRight: '4px', width: '130px' }}
+            >
+                <option value="Atomic ER">Atomic ER</option>
+                <option value="aER">aER</option>
+                <option value="iER">iER</option>
+                <option value="rER">rER</option>
+            </TextField>
+            <TextField
+                label="Size"
+                type="number"
+                value={selectedNodes[selectedNodes.length-1].size || ''}
+                onChange={handleSizeOptionChange}
+                margin="dense"
+                size="small"
+                style={{ marginLeft: '4px', marginRight: '4px', width: '70px' }}
+            />
+            <Button
+                // startIcon={<Remove/>}
+                onClick={handleRemoveClick}
+                variant="outlined"
+                color="primary"
+                size="small"
+                style={{ marginLeft: '4px', width: '20px', marginTop: '10px' }}
+            >
+                Remove
+            </Button>
+
+        </Popover>
+     );
+}
 };
+
 
 export default NodePopover;

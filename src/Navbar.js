@@ -6,13 +6,12 @@ import './Navbar.css';
 import { IconContext } from 'react-icons';
 
 
-const Navbar = ({ onAction }) => {
+const Navbar = ({ onExportClick, onDownloadCSV }) => {
   const [sidebar, setSidebar] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const showSidebar = () => setSidebar(!sidebar);
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
-
 
 
   let data = [
@@ -27,14 +26,11 @@ const Navbar = ({ onAction }) => {
   content: [
     { 
       label: "Download CSV", 
-      onClick: onAction
+      onClick: onDownloadCSV
     },
     { 
       label: "Download SVG", 
-      onClick: () => { 
-        // Your logic to download SVG
-        console.log("Download SVG clicked");
-      }
+      onClick: onExportClick
     }
 ]
 },

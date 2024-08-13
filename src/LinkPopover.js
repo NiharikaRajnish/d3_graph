@@ -87,7 +87,7 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
                 horizontal: 'center',
             }}
         >
-            <FormControl style={{ margin: '8px', width: '150px' }}>
+            <FormControl style={{ margin: '8px', width: '180px' }}>
                 <InputLabel>Type</InputLabel>
                 <Select
                     value={selectedLink.type}
