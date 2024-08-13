@@ -7,6 +7,7 @@ import NodePopover from './NodePopover';
 import LinkPopover from './LinkPopover';
 import Navbar from './Navbar';
 import { useSlider } from './SliderContext'; 
+import exportSvg from './ExportSvg'; // Import the function
 
 const width = window.innerWidth * 0.9,
     height = 600,
@@ -857,22 +858,130 @@ const NetworkGraph = () => {
         // Update nodes with hidden property based on filterType
         const updatedNodes = nodes.map(node => {
             let hidden = false;
-
             if (node.id === 0 || node.id === 54321) {
                 hidden = false; // Always show nodes with id 1 and 2
-            } else {
+            } 
+            else {
                 switch (filterType) {
                     case "1":
                         hidden = !(node.shape === 'aER' || node.shape === 'rER');
+                        // Find last node(connected to end) to use later
+
+    // Iterate backwards through the nodes array
+for (let i = nodes.length - 1; i >= 0; i--) {
+
+    const node = nodes[i];
+      // Find the previous aER node in the array
+      const prevAER = nodes.slice(0, i).reverse().find(n => n.shape === 'aER');
+
+
+    if(node.id == 54321){
+        if(prevAER ){
+        node.comesAfter = prevAER.id;
+        }
+    }
+
+    // Link all aER nodes together with a comesAfter relation
+    if (node.shape === 'aER') {
+        
+        // If there is a previous aER node, set the comesAfter property
+        if (prevAER) {
+            node.comesAfter = prevAER.id;
+        } 
+        else {
+            node.comesAfter = 0; // No previous aER, set to a default value
+        }
+    }
+}
+
+                
                         break;
                     case "2":
+                        //clear any modifications made to the dataset from View 1
+
+                        for(const i of nodes){
+                            if(i.shape == "aER" || i.id == 54321){
+                                if(i.id != 54321){
+                                i.comesAfter = null
+                                }
+                                else{
+                                    var node_id = i.comesAfter
+                                    var curr = nodes[node_id-3]
+                                    if( curr && curr.shape == "aER"){
+                                        i.comesAfter = null
+                                    }
+                                    for (let k = nodes.length - 1; k >= 0; k--){
+                                        let curr = nodes[k];
+                                        if(curr.shape == "iER"){
+                                            console.log(curr.id);
+                                            i.comesAfter = curr.id;
+                                            break;
+                                        }
+                                    }
+                                  
+                                }
+                            }
+                        }
                         hidden = node.shape == 'Atomic ER';
                         break;
                     case "3":
+                         //clear any modifications made to the dataset from View 1
+
+                         for(const i of nodes){
+                            if(i.shape == "aER" || i.id == 54321){
+                                if(i.id != 54321){
+                                i.comesAfter = null
+                                }
+                                else{
+                                    var node_id = i.comesAfter
+                                    var curr = nodes[node_id-3]
+                                    if( curr && curr.shape == "aER"){
+                                        i.comesAfter = null
+                                    }
+                                    for (let k = nodes.length - 1; k >= 0; k--){
+                                        let curr = nodes[k];
+                                        if(curr.shape == "iER"){
+                                            console.log(curr.id);
+                                            i.comesAfter = curr.id;
+                                            break;
+                                        }
+                                    }
+                                  
+                                }
+                            }
+                        }
+
                         hidden = false; // Show all nodes
                         break;
                     case "4":
-                        // Implement your logic for View 4
+
+                     //clear any modifications made to the dataset from View 1
+
+                     for(const i of nodes){
+                        if(i.shape == "aER" || i.id == 54321){
+                            if(i.id != 54321){
+                            i.comesAfter = null
+                            }
+                            else{
+                                var node_id = i.comesAfter
+                                var curr = nodes[node_id-3]
+                                if( curr && curr.shape == "aER"){
+                                    i.comesAfter = null
+                                }
+                                for (let k = nodes.length - 1; k >= 0; k--){
+                                    let curr = nodes[k];
+                                    if(curr.shape == "iER"){
+                                        console.log(curr.id);
+                                        i.comesAfter = curr.id;
+                                        break;
+                                    }
+                                }
+                              
+                            }
+                        }
+                    }
+
+
                         break;
                     default:
                         hidden = false;
@@ -981,12 +1090,17 @@ const NetworkGraph = () => {
         }
     }
 
+
+  function handleExportClick () {
+    exportSvg(svgRef.current, 'my-d3-graph.svg');
+  };
+
     
 
     return (
         <div>
             <div className='navbar'>
-            <Navbar onAction={downloadCSV}/>
+            <Navbar onExportClick={handleExportClick} onDownloadCSV={downloadCSV}/>
             <div className='buttons'>
             <input
                 type="file"
