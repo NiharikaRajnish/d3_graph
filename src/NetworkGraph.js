@@ -724,12 +724,12 @@ const NetworkGraph = () => {
             setSelectedNodes(prevNodes => {
                 const newNodes = [...prevNodes, d];
 
- // Show popover if more than one node is selected
-//  if (newNodes.length > 1 && shiftRef.current == false) {
-//     setAnchorElMultiNode(event.currentTarget); // Set the popover anchor to the event target
-// } else {
-//     setAnchorElMultiNode(null); // Hide popover if only one node is selected
-// }
+//  Show popover if more than one node is selected
+ if (newNodes.length > 1 && shiftRef.current == false) {
+    setAnchorElMultiNode(event.currentTarget); // Set the popover anchor to the event target
+} else {
+    setAnchorElMultiNode(null); // Hide popover if only one node is selected
+}
 
                 updateNodeBorders(newNodes);
                 return newNodes;
