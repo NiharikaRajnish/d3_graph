@@ -26,7 +26,7 @@ const NetworkGraph = () => {
     const [shiftPressed, setShiftPressed] = useState(false);
     const [selectedNodes, setSelectedNodes] = useState([0]);
     const [selectedLink, setSelectedLink] = useState(null);
-    const [simulations, setSimulations] = useState({ '1': null, '2': null, '3': null, '4': null });
+    const [nodeSet, setNodeSet] = useState({ '1': null, '2': null, '3': null, '4': null });
     const [anchorElNode, setAnchorElNode] = useState(null);
     const [anchorElMultiNode, setAnchorElMultiNode] = useState(null);
     const [anchorElLink, setAnchorElLink] = useState(null);
@@ -35,8 +35,9 @@ const NetworkGraph = () => {
     const [labelsToggled, setLabelsToggled] = useState(false);
     const [linkingMessage, setLinkingMessage] = useState('');
     const [filterType, setFilterType] = useState('3');
-    const [hoveredNode, setHoveredNode] = useState(null);
     const [isAlertError, setIsAlertError] = useState(false);
+    const currNodesNumRef = useRef(0);
+    const prevNodesNumRef = useRef(0);
     const svgRef = useRef(null);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
     const linkingNodeRef = useRef(linkingNode);
@@ -54,7 +55,8 @@ const NetworkGraph = () => {
     }, [linkingNode]);
 
     useEffect(() => {
-        const newLinks = processLinks(nodes.filter(n => !n.hidden));
+        currNodesNumRef.current = nodes.length;
+        const newLinks = processLinks(nodes);
         setLinks(newLinks);
     }, [nodes]);
 
@@ -170,6 +172,10 @@ const NetworkGraph = () => {
     }, [nodes, links, selectedLink, selectedNode]);
 
     useEffect(() => {
+        let lowAlpha = false;
+        if (Math.abs(prevNodesNumRef.current - currNodesNumRef.current) < 2) {
+            lowAlpha = true;
+        }
         const svg = d3.select(svgRef.current);
         height = svg.node().getBoundingClientRect().height * 0.9;
         width = svg.node().getBoundingClientRect().width * 0.9;
@@ -179,7 +185,8 @@ const NetworkGraph = () => {
             svg.selectAll('.node')
                 .attr('transform', d => `translate(${d.x},${d.y})`)
                 .attr("cx", (d) => { return d.x = Math.max(radius, Math.min(width - 100 - radius, d.x)); })
-                .attr("cy", (d) => { return d.y = Math.max(radius, Math.min(height - radius, d.y)); });
+                .attr("cy", (d) => { return d.y = Math.max(radius, Math.min(height - radius, d.y)); })
+                .attr('visibility', d => d.hidden ? 'hidden' : 'visible');
 
 
             svg.selectAll('.nodeShape')
@@ -201,6 +208,7 @@ const NetworkGraph = () => {
                             return 'grey';
                     }
                 })
+                .attr('visibility', d => (d.source.hidden || d.target.hidden) ? 'hidden' : 'visible')
                 .lower(); // Move links below node shapes
             svg.selectAll('.markerDef')
                 .attr('fill', d => {
@@ -287,8 +295,8 @@ const NetworkGraph = () => {
         };
         // todo: filter based on ER type and selected view/FilterType (maybe eligibilty function type switching)
         // maybe also add ids to links so u kno which ones to keep -- might have to change the way links are stored (temporary view ones and permanent ones)
-        const simulation = d3.forceSimulation(nodes.filter(n => !n.hidden))
-            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(85)) // Link force
+        const simulation = d3.forceSimulation(nodes)
+            .force('link', d3.forceLink(links).id(d => d.id).distance(85)) // Link force
             .force('charge', d3.forceManyBody().strength(-1000).distanceMax(175).distanceMin(0.01)) // Charge force to repel nodes
             .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
             .force('y', verticalForce(nodes, 1)) // Custom vertical force
@@ -376,7 +384,7 @@ const NetworkGraph = () => {
             .text((d) => d.type)
             .style('font-size', 9);
         const link = svg.select('#main').selectAll('.link')
-            .data(links.filter(l => !l.hidden), d => `${d.source.id}-${d.target.id}`);
+            .data(links, d => `${d.source.id}-${d.target.id}`);
 
         link.exit().remove();
 
@@ -430,7 +438,7 @@ const NetworkGraph = () => {
             .text(d => d.type);
 
         const node = svg.select('#main').selectAll('.node')
-            .data(nodes.filter(n => !n.hidden), d => d.id);
+            .data(nodes, d => d.id);
 
 
         node.exit().remove();
@@ -486,8 +494,8 @@ const NetworkGraph = () => {
 
         simulation.nodes(nodes)
         simulation.force('link').links(links);
-        simulation.alpha(0.16).restart(); // Use a lower alpha value to minimize layout disruptions
-
+        simulation.alpha(lowAlpha ? 0.001 : 0.16).restart(); // Use a lower alpha value to minimize layout disruptions
+        prevNodesNumRef.current = currNodesNumRef.current;
         if (shiftRef.current == false) {
 
             updateNodeBorders(selectedNode ? [selectedNode] : [0]); // Update node borders initially
@@ -1015,16 +1023,6 @@ const NetworkGraph = () => {
 
     };
 
-
-    const handleNodeHover = (event, d) => {
-        // Set the hovered node in state
-        setHoveredNode(d);
-    };
-
-    const handleNodeMouseOut = () => {
-        // Clear the hovered node state
-        setHoveredNode(null);
-    };
 
     const updateNodeBorders = (selected) => {
         if (shiftRef.current == true) {
