@@ -6,7 +6,7 @@ import { Add, ErrorOutline, Visibility } from '@mui/icons-material';
 import NodePopover from './NodePopover';
 import LinkPopover from './LinkPopover';
 import Navbar from './Navbar';
-import { useSlider } from './SliderContext'; 
+import { useSlider } from './SliderContext';
 import exportSvg from './ExportSvg'; // Import the function
 
 
@@ -26,6 +26,7 @@ const NetworkGraph = () => {
     const [shiftPressed, setShiftPressed] = useState(false);
     const [selectedNodes, setSelectedNodes] = useState([0]);
     const [selectedLink, setSelectedLink] = useState(null);
+    const [simulations, setSimulations] = useState({ '1': null, '2': null, '3': null, '4': null });
     const [anchorElNode, setAnchorElNode] = useState(null);
     const [anchorElMultiNode, setAnchorElMultiNode] = useState(null);
     const [anchorElLink, setAnchorElLink] = useState(null);
@@ -39,7 +40,7 @@ const NetworkGraph = () => {
     const svgRef = useRef(null);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
     const linkingNodeRef = useRef(linkingNode);
-    const { sliderValue, setSliderValue, aERSliderValue ,setaERSliderValue,iERSliderValue,setIERSliderValue,rERSliderValue, setrERSliderValue,atomicSliderValue, setatomicSliderValue} = useSlider();
+    const { sliderValue, setSliderValue, aERSliderValue, setaERSliderValue, iERSliderValue, setIERSliderValue, rERSliderValue, setrERSliderValue, atomicSliderValue, setatomicSliderValue } = useSlider();
     const shiftRef = useRef(shiftPressed);
 
 
@@ -47,7 +48,7 @@ const NetworkGraph = () => {
     useEffect(() => {
         shiftRef.current = shiftPressed;
     }, [shiftPressed]);
-    
+
     useEffect(() => {
         linkingNodeRef.current = linkingNode;
     }, [linkingNode]);
@@ -142,18 +143,18 @@ const NetworkGraph = () => {
         } else if (event.key === '+' && selectedNode && !selectedLink) {
             handleAddLink();
         }
-        if(event.key === 'Shift'){
+        if (event.key === 'Shift') {
             setShiftPressed(true)
-        
+
         }
-        
+
     };
 
     const handleKeyUp = (event) => {
         if (event.key === 'Shift') {
-            setAnchorElMultiNode(event.currentTarget); 
+            setAnchorElMultiNode(event.currentTarget);
             setShiftPressed(false);
-        
+
         }
     };
 
@@ -288,7 +289,7 @@ const NetworkGraph = () => {
         // maybe also add ids to links so u kno which ones to keep -- might have to change the way links are stored (temporary view ones and permanent ones)
         const simulation = d3.forceSimulation(nodes.filter(n => !n.hidden))
             .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(85)) // Link force
-            .force('charge', d3.forceManyBody().strength(-2000).distanceMax(175).distanceMin(0.01)) // Charge force to repel nodes
+            .force('charge', d3.forceManyBody().strength(-1000).distanceMax(175).distanceMin(0.01)) // Charge force to repel nodes
             .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
             .force('y', verticalForce(nodes, 1)) // Custom vertical force
             .on('tick', ticked);
@@ -485,22 +486,24 @@ const NetworkGraph = () => {
 
         simulation.nodes(nodes)
         simulation.force('link').links(links);
-        simulation.alpha(0.3).restart(); // Use a lower alpha value to minimize layout disruptions
+        simulation.alpha(0.16).restart(); // Use a lower alpha value to minimize layout disruptions
 
-        if(shiftRef.current == false){
+        if (shiftRef.current == false) {
 
-         updateNodeBorders(selectedNode ? [selectedNode] : [0]); // Update node borders initially
+            updateNodeBorders(selectedNode ? [selectedNode] : [0]); // Update node borders initially
         }
-        else{
+        else {
             updateNodeBorders(selectedNodes)
         }
 
         function dragStarted(event, d) {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
+            if (!event.active) simulation.alphaTarget(0.1).restart();
             if (!d.fixed) {
                 d.fx = d.x;
                 d.fy = d.y;
             }
+            simulation.velocityDecay(0.7); // reduce jiterriness
+            simulation.force('center').strength(0.1);
         }
 
         function dragged(event, d) {
@@ -511,11 +514,15 @@ const NetworkGraph = () => {
         }
 
         function dragEnded(event, d) {
-            if (!event.active) simulation.alphaTarget(0);
+            if (!event.active) simulation.alphaTarget(0.001);
             if (!d.fixed) {
                 d.fx = null;
                 d.fy = null;
             }
+            setTimeout(() => {
+                simulation.force('center').strength(1); // Add centering force back
+                simulation.velocityDecay(0.4);
+            }, 50); // Delay reapplying velocity decay to prevent nodes from suddenly flying off
         }
 
 
@@ -608,34 +615,34 @@ const NetworkGraph = () => {
             setNodes([...nodes]); // Trigger re-render to update node shape and color
             // setLinks([...links]);
         }
-        if(selectedNodes){
-            for(var i of selectedNodes){
-            i.shape = newShape;
-            switch (newShape) {
-                case 'Atomic ER':
-                    i.color = '#ADD8E6';
-                    break;
-                case 'aER':
-                    i.color = 'orange';
-                    i.stroke ="black";
+        if (selectedNodes) {
+            for (var i of selectedNodes) {
+                i.shape = newShape;
+                switch (newShape) {
+                    case 'Atomic ER':
+                        i.color = '#ADD8E6';
+                        break;
+                    case 'aER':
+                        i.color = 'orange';
+                        i.stroke = "black";
 
-                    break;
-                case 'iER':
-                    i.color = 'red';
-                    i.stroke ="black";
-                    break;
-                case 'rER':
-                    i.color = 'green';
-                    i.stroke ="black";
-                    break;
-                default:
-                    i.color = color('default');
+                        break;
+                    case 'iER':
+                        i.color = 'red';
+                        i.stroke = "black";
+                        break;
+                    case 'rER':
+                        i.color = 'green';
+                        i.stroke = "black";
+                        break;
+                    default:
+                        i.color = color('default');
+                }
             }
+            setNodes([...nodes]); // Trigger re-render to update node shape and color
         }
-        setNodes([...nodes]); // Trigger re-render to update node shape and color
-    }
 
-        
+
     };
 
     const handleSizeChange = (newSize) => {
@@ -645,12 +652,12 @@ const NetworkGraph = () => {
             setAnchorElNode(selectedNode)
         }
         else if (selectedNodes && selectedNodes.length > 0) {
-            for(var i of selectedNodes){
-               console.log(i)
+            for (var i of selectedNodes) {
+                console.log(i)
                 i.size = newSize
             }
             setNodes([...nodes]);
-           
+
         }
     };
     const handleTypeChange = (newType) => {
@@ -705,14 +712,14 @@ const NetworkGraph = () => {
             setNodes(nodes.filter(n => n.id !== nodeId));
             // setLinks(links.filter(l => l.source.id !== nodeId && l.target.id !== nodeId));
             setSelectedNode(null);
-        } 
-        else if(selectedNodes){
+        }
+        else if (selectedNodes) {
             const selectedIds = selectedNodes.map(n => n.id);
             setNodes(nodes.filter(n => !selectedIds.includes(n.id)));
 
         }
-        
-        
+
+
         else {
             setLinkingMessage('Select a node to delete');
             setTimeout(() => setLinkingMessage(''), 2000); // Clear the message after 2 seconds
@@ -720,52 +727,52 @@ const NetworkGraph = () => {
     };
 
     function nodeClicked(event, d) {
-        if(shiftRef.current){  
+        if (shiftRef.current) {
             setSelectedNodes(prevNodes => {
                 const newNodes = [...prevNodes, d];
 
- // Show popover if more than one node is selected
-//  if (newNodes.length > 1 && shiftRef.current == false) {
-//     setAnchorElMultiNode(event.currentTarget); // Set the popover anchor to the event target
-// } else {
-//     setAnchorElMultiNode(null); // Hide popover if only one node is selected
-// }
+                // Show popover if more than one node is selected
+                //  if (newNodes.length > 1 && shiftRef.current == false) {
+                //     setAnchorElMultiNode(event.currentTarget); // Set the popover anchor to the event target
+                // } else {
+                //     setAnchorElMultiNode(null); // Hide popover if only one node is selected
+                // }
 
                 updateNodeBorders(newNodes);
                 return newNodes;
             });
         }
-        else{
+        else {
             setSelectedNodes([]);
-        const currLN = linkingNodeRef.current;
+            const currLN = linkingNodeRef.current;
 
-        if (currLN && currLN.id !== d.id) {
-            const existingLink = links.find(link =>
-                (link.source.id === currLN.id && link.target.id === d.id) ||
-                (link.source.id === d.id && link.target.id === currLN.id)
-            );
-            // const cLN = nodes.find(n => n.id === currentLinkingNode.id)
-            if (!existingLink) {
-                currLN.comesAfter = d.id
+            if (currLN && currLN.id !== d.id) {
+                const existingLink = links.find(link =>
+                    (link.source.id === currLN.id && link.target.id === d.id) ||
+                    (link.source.id === d.id && link.target.id === currLN.id)
+                );
+                // const cLN = nodes.find(n => n.id === currentLinkingNode.id)
+                if (!existingLink) {
+                    currLN.comesAfter = d.id
 
-                setNodes([...nodes]);
-                // setLinks(prevLinks => [...prevLinks, { source: currentLinkingNode, target: d, type: 'Comes After' }]);
+                    setNodes([...nodes]);
+                    // setLinks(prevLinks => [...prevLinks, { source: currentLinkingNode, target: d, type: 'Comes After' }]);
+                }
+
+                setLinkingNode(null);
+                setLinkingMessage('');
+
+            } else {
+                setSelectedNode(d);
+                setSelectedLink(null); // Deselect link if a node is clicked
+                setAnchorElNode(d); // Set anchor for node popover
+                updateNodeBorders([d]); // Add this line to update node borders
+
+                // Deselect any previously clicked link
+                d3.selectAll('.link.clicked').classed('clicked', false);
             }
-
-            setLinkingNode(null);
-            setLinkingMessage('');
-        
-        } else {
-            setSelectedNode(d);
-            setSelectedLink(null); // Deselect link if a node is clicked
-            setAnchorElNode(d); // Set anchor for node popover
-            updateNodeBorders([d]); // Add this line to update node borders
-
-            // Deselect any previously clicked link
-            d3.selectAll('.link.clicked').classed('clicked', false);
         }
     }
-}
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (file) {
@@ -902,132 +909,97 @@ const NetworkGraph = () => {
 
     const handleFilterNodes = (filterType) => {
         // Update nodes with hidden property based on filterType
+        switch (filterType) {
+            case "1":
+                for (let i = nodes.length - 1; i >= 0; i--) {
+                    const node = nodes[i];
+                    // Find the previous aER node in the array
+                    const prevAER = nodes.slice(0, i).reverse().find(n => n.shape === 'aER');
+                    if (node.id == 54321) {
+                        if (prevAER) {
+                            node.comesAfter = prevAER.id;
+                        }
+                    }
+                    // Link all aER nodes together with a comesAfter relation
+                    if (node.shape === 'aER') {
+
+                        // If there is a previous aER node, set the comesAfter property
+                        if (prevAER) {
+                            node.comesAfter = prevAER.id;
+                        }
+                        else {
+                            node.comesAfter = 0; // No previous aER, set to a default value
+                        }
+                    }
+                }
+            case "2":
+                for (const i of nodes) {
+                    if (i.shape == "aER" || i.id == 54321) {
+                        if (i.id != 54321) {
+                            i.comesAfter = null
+                        }
+                        else {
+                            var node_id = i.comesAfter
+                            var curr = nodes[node_id - 3]
+                            if (curr && curr.shape == "aER") {
+                                i.comesAfter = null
+                            }
+                            for (let k = nodes.length - 1; k >= 0; k--) {
+                                let curr = nodes[k];
+                                if (curr.shape == "iER") {
+                                    console.log(curr.id);
+                                    i.comesAfter = curr.id;
+                                    break;
+                                }
+                            }
+
+                        }
+                    }
+                }
+            case "3":
+            case "4":
+                for (const i of nodes) {
+                    if (i.shape == "aER" || i.id == 54321) {
+                        if (i.id != 54321) {
+                            i.comesAfter = null
+                        }
+                        else {
+                            var node_id = i.comesAfter
+                            var curr = nodes[node_id - 3]
+                            if (curr && curr.shape == "aER") {
+                                i.comesAfter = null
+                            }
+                            for (let k = nodes.length - 1; k >= 0; k--) {
+                                let curr = nodes[k];
+                                if (curr.shape == "iER") {
+                                    console.log(curr.id);
+                                    i.comesAfter = curr.id;
+                                    break;
+                                }
+                            }
+
+                        }
+                    }
+                }
+
+
+        }
         const updatedNodes = nodes.map(node => {
             let hidden = false;
             if (node.id === 0 || node.id === 54321) {
                 hidden = false; // Always show nodes with id 1 and 2
-            } 
+            }
             else {
                 switch (filterType) {
                     case "1":
                         hidden = !(node.shape === 'aER' || node.shape === 'rER');
-                        // Find last node(connected to end) to use later
-
-    // Iterate backwards through the nodes array
-for (let i = nodes.length - 1; i >= 0; i--) {
-
-    const node = nodes[i];
-      // Find the previous aER node in the array
-      const prevAER = nodes.slice(0, i).reverse().find(n => n.shape === 'aER');
-
-
-    if(node.id == 54321){
-        if(prevAER ){
-        node.comesAfter = prevAER.id;
-        }
-    }
-
-    // Link all aER nodes together with a comesAfter relation
-    if (node.shape === 'aER') {
-        
-        // If there is a previous aER node, set the comesAfter property
-        if (prevAER) {
-            node.comesAfter = prevAER.id;
-        } 
-        else {
-            node.comesAfter = 0; // No previous aER, set to a default value
-        }
-    }
-}
-
-                
                         break;
                     case "2":
-                        //clear any modifications made to the dataset from View 1
-
-                        for(const i of nodes){
-                            if(i.shape == "aER" || i.id == 54321){
-                                if(i.id != 54321){
-                                i.comesAfter = null
-                                }
-                                else{
-                                    var node_id = i.comesAfter
-                                    var curr = nodes[node_id-3]
-                                    if( curr && curr.shape == "aER"){
-                                        i.comesAfter = null
-                                    }
-                                    for (let k = nodes.length - 1; k >= 0; k--){
-                                        let curr = nodes[k];
-                                        if(curr.shape == "iER"){
-                                            console.log(curr.id);
-                                            i.comesAfter = curr.id;
-                                            break;
-                                        }
-                                    }
-                                  
-                                }
-                            }
-                        }
                         hidden = node.shape == 'Atomic ER';
                         break;
                     case "3":
-                         //clear any modifications made to the dataset from View 1
-
-                         for(const i of nodes){
-                            if(i.shape == "aER" || i.id == 54321){
-                                if(i.id != 54321){
-                                i.comesAfter = null
-                                }
-                                else{
-                                    var node_id = i.comesAfter
-                                    var curr = nodes[node_id-3]
-                                    if( curr && curr.shape == "aER"){
-                                        i.comesAfter = null
-                                    }
-                                    for (let k = nodes.length - 1; k >= 0; k--){
-                                        let curr = nodes[k];
-                                        if(curr.shape == "iER"){
-                                            console.log(curr.id);
-                                            i.comesAfter = curr.id;
-                                            break;
-                                        }
-                                    }
-                                  
-                                }
-                            }
-                        }
-
-                        hidden = false; // Show all nodes
-                        break;
                     case "4":
-
-                     //clear any modifications made to the dataset from View 1
-
-                     for(const i of nodes){
-                        if(i.shape == "aER" || i.id == 54321){
-                            if(i.id != 54321){
-                            i.comesAfter = null
-                            }
-                            else{
-                                var node_id = i.comesAfter
-                                var curr = nodes[node_id-3]
-                                if( curr && curr.shape == "aER"){
-                                    i.comesAfter = null
-                                }
-                                for (let k = nodes.length - 1; k >= 0; k--){
-                                    let curr = nodes[k];
-                                    if(curr.shape == "iER"){
-                                        console.log(curr.id);
-                                        i.comesAfter = curr.id;
-                                        break;
-                                    }
-                                }
-                              
-                            }
-                        }
-                    }
-
-
+                        hidden = false; // Show all nodes
                         break;
                     default:
                         hidden = false;
@@ -1055,22 +1027,22 @@ for (let i = nodes.length - 1; i >= 0; i--) {
     };
 
     const updateNodeBorders = (selected) => {
-        if(shiftRef.current == true){
-                  // Apply black stroke to all selected nodes
-                  const selectedNodeIds = Object.values(selected).map(node => node.id);
-                  console.log(selectedNodeIds)
-                  d3.select(svgRef.current).selectAll('.nodeShape')
-                      .attr('stroke', d => (selectedNodeIds.includes(d.id) ? 'black' : 'none'))
-                      .attr('stroke-width', '0.5');
-    }
-        if(shiftRef.current == false && selected.length > 0){
+        if (shiftRef.current == true) {
+            // Apply black stroke to all selected nodes
+            const selectedNodeIds = Object.values(selected).map(node => node.id);
+            console.log(selectedNodeIds)
+            d3.select(svgRef.current).selectAll('.nodeShape')
+                .attr('stroke', d => (selectedNodeIds.includes(d.id) ? 'black' : 'none'))
+                .attr('stroke-width', '0.5');
+        }
+        if (shiftRef.current == false && selected.length > 0) {
             const selectedNodeId = selected[0].id
-        d3.select(svgRef.current).selectAll('.nodeShape')
-            .attr('stroke', d => (d.id === selectedNodeId ? 'black' : 'none'))
-            .attr('stroke-width', d => (d.id === selectedNodeId ? 0.5 : 0));
+            d3.select(svgRef.current).selectAll('.nodeShape')
+                .attr('stroke', d => (d.id === selectedNodeId ? 'black' : 'none'))
+                .attr('stroke-width', d => (d.id === selectedNodeId ? 0.5 : 0));
         }
-        }
- 
+    }
+
 
     const updateLinkBorders = (selectedLinkId) => {
         d3.select(svgRef.current).selectAll('.link')
@@ -1104,14 +1076,14 @@ for (let i = nodes.length - 1; i >= 0; i--) {
         }
     }
 
-  function handleExportClick () {
-    exportSvg(svgRef.current, 'my-d3-graph.svg');
-  };
+    function handleExportClick() {
+        exportSvg(svgRef.current, 'my-d3-graph.svg');
+    };
 
     return (
         <div>
             <div className='navbar'>
-                <Navbar onExportClick={handleExportClick} onDownloadCSV={downloadCSV}/>
+                <Navbar onExportClick={handleExportClick} onDownloadCSV={downloadCSV} />
                 <div className='buttons'>
                     <input
                         type="file"
@@ -1194,8 +1166,8 @@ for (let i = nodes.length - 1; i >= 0; i--) {
                 />
             )}
 
-{selectedNodes && (
-    //  console.log(anchorElMultiNode),
+            {selectedNodes && !shiftPressed && (
+                //  console.log(anchorElMultiNode),
                 <NodePopover
                     id="node-popover"
                     open={Boolean(anchorElMultiNode)}
