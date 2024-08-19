@@ -308,9 +308,9 @@ const NetworkGraph = () => {
         // todo: filter based on ER type and selected view/FilterType (maybe eligibilty function type switching)
         // maybe also add ids to links so u kno which ones to keep -- might have to change the way links are stored (temporary view ones and permanent ones)
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(100)) // Link force
-            // .force('charge', d3.forceManyBody().strength(-1000).distanceMax(175).distanceMin(0.01)) // Charge force to repel nodes
-            .force('charge', d3.forceCollide().radius(42.5).strength(filterType === '1' ? 0.01 : 1)) // Charge force to repel nodes
+            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(80)) // Link force
+            .force('chargeMB', d3.forceManyBody().strength(filterType === '1' ? 0 : -1000).distanceMax(80).distanceMin(0.01)) // Charge force to repel nodes
+            .force('charge', d3.forceCollide().radius(42.5).strength(filterType === '1' ? 0.01 : 1))
             .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
             .force('y', verticalForce(nodes, 1)) // Custom vertical force
             .on('tick', ticked);
@@ -839,25 +839,38 @@ const NetworkGraph = () => {
         });
 
 
-        const countIERNodes = parsedData.filter(node => node.shape === 'iER').length;
+        const iERNodes = parsedData.filter(node => node.shape === 'iER');
         let cnt = 0;
         let tmpID = -5
+        let lastFx = 0
         parsedData.forEach((node, index) => {
             if (node.shape === 'iER') {
                 cnt++;
                 tmpID = node.id;
                 node.fixed = true;
                 node.fy = height / 2;
-                node.fx = (cnt * (width / countIERNodes)) - (width * 0.2);
+                node.fx = (cnt * (width / iERNodes.length)) - (width * 0.2);
+                lastFx = node.fx;
             }
-            // else if (node.isPartOf === tmpID) {
-            //     // node.x = (cnt * (width / countIERNodes)) - (radius * 2);
-            //     node.y = height / 2 + (((Math.random() * 2) - 1) * (height / 2));
-            // }
+            else if (node.shape === 'aER') {
+                node.fy = node.comesAfter ? (height) / 2 : null;
+            }
         });
-        const filteredNodes = parsedData.filter(node => node.shape === 'iER');
-        let maxIdNode = filteredNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, filteredNodes[0]);
-        let minIdNode = filteredNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, filteredNodes[0]);
+        // filter 'iER' nodes then get the average fx position between each consecutive iER node pairs
+        const aERNodes = parsedData.filter(node => node.shape === 'aER');
+        const avgFXs = []
+        const iERsStartEnd = [...iERNodes, nodes.find(n => n.id === 54321)]
+        for (let i = 0; i < iERsStartEnd.length - 1; i++) {
+            const iER1 = iERsStartEnd[i];
+            const iER2 = iERsStartEnd[i + 1];
+            avgFXs.push((iER1.fx + iER2.fx) / 2);
+        }
+        for (let i = 0; i < aERNodes.length; i++) {
+            aERNodes[i].fx = avgFXs[i];
+        }
+
+        let maxIdNode = iERNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, iERNodes[0]);
+        let minIdNode = iERNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, iERNodes[0]);
         const tmpNodes = nodes.filter(n => (n.id === 54321) || (n.id === 0)).forEach(node => { // add only start and end
             if (node.id === 54321) {
                 const updEnd = {
