@@ -914,249 +914,90 @@ const loadNodesFromLocalStorage = () => {
     return null; // Return null if no nodes are saved
 };
 
-
 const handleFilterNodes = (filterType) => {
     // Save the updated nodes to Local Storage
-    var saved = loadNodesFromLocalStorage
+    var saved = loadNodesFromLocalStorage()
     if( saved == null){
-    saveNodesToLocalStorage(updatedNodes);
+    saveNodesToLocalStorage(nodes);
     }
 
-    let updatedNodes;
+    let updatedNodes = nodes
+
 
     switch (filterType) {
         case "1":
-    updatedNodes = nodes.map(node => {
-            let hidden = false;
-            if (node.id === 0 || node.id === 54321) {
-                hidden = false; // Always show nodes with id 1 and 2
-            } 
-            else {   
-                hidden = !(node.shape === 'aER' || node.shape === 'rER');
-            }
-                   
-
-    // Iterate backwards through the nodes array
-for (let i = nodes.length - 1; i >= 0; i--) {
-
-    const node = nodes[i];
-      // Find the previous aER node in the array
-      const prevAER = nodes.slice(0, i).reverse().find(n => n.shape === 'aER');
-
-
-    if(node.id == 54321){
-        if(prevAER ){
-        node.comesAfter = prevAER.id;
-        }
-    }
-
-    // Link all aER nodes together with a comesAfter relation
-    if (node.shape === 'aER') {
-        
-        // If there is a previous aER node, set the comesAfter property
-        if (prevAER) {
+            updatedNodes = nodes.map(node => {
+                let hidden = false;
+                if (node.id === 0 || node.id === 54321) {
+                    hidden = false; // Always show nodes with id 1 and 2
+                } 
+                else {   
+                    hidden = !(node.shape === 'aER' || node.shape === 'rER');
+                }
+                       
+    
+        // Iterate backwards through the nodes array
+    for (let i = nodes.length - 1; i >= 0; i--) {
+    
+        const node = nodes[i];
+          // Find the previous aER node in the array
+          const prevAER = nodes.slice(0, i).reverse().find(n => n.shape === 'aER');
+    
+    
+        if(node.id == 54321){
+            if(prevAER ){
             node.comesAfter = prevAER.id;
-        } 
-        else {
-            node.comesAfter = 0; // No previous aER, set to a default value
+            }
+        }
+    
+        // Link all aER nodes together with a comesAfter relation
+        if (node.shape === 'aER') {
+            
+            // If there is a previous aER node, set the comesAfter property
+            if (prevAER) {
+                node.comesAfter = prevAER.id;
+            } 
+            else {
+                node.comesAfter = 0; // No previous aER, set to a default value
+            }
         }
     }
-}
+    
+    return { ...node, hidden };
+    });
+    
 
-        return { ...node, hidden };
-        });
+            break;
+        case "2":
 
-        break;
+            updatedNodes = saved.map(node => {
+                let hidden = node.shape === 'Atomic ER';
 
+                return { ...node, hidden };
+            });
+            break;
+        case "3":
+            updatedNodes = saved.map(node => {
+              
 
+                return { ...node, hidden: false };
+            });
+            break;
+        case "4":
+            updatedNodes = saved.map(node => {
+                // ( custom logic to update nodes in case "4")
+
+                return { ...node, hidden: false };
+            });
+            break;
         default:
-            // For all other cases, load the nodes from Local Storage
-            const savedNodes = loadNodesFromLocalStorage();
-            if (savedNodes) {
-                updatedNodes = savedNodes.map(node => {
-                    let hidden;
-
-                    switch (filterType) {
-                        case "2":
-                            hidden = node.shape === 'Atomic ER';
-
-                            // (Your custom logic to update nodes in case "2")
-
-                            break;
-                        case "3":
-                            // (Your custom logic to update nodes in case "3")
-                            hidden = false;
-                            break;
-                        case "4":
-                            // (Your custom logic to update nodes in case "4")
-                            hidden = false;
-                            break;
-                        default:
-                            hidden = false;
-                            break;
-                    }
-
-                    return { ...node, hidden };
-                });
-            } else {
-                // Fallback if no saved nodes are found
-                console.error("No saved nodes found in Local Storage.");
-                return;
-            }
+            updatedNodes = saved.map(node => ({ ...node, hidden: false }));
             break;
     }
 
     // Update the nodes state with the modified nodes
     setNodes(updatedNodes);
 };
-
-
-//     const handleFilterNodes = (filterType) => {
-//   // Save the current nodes to Local Storage before making changes
-//   saveNodesToLocalStorage(nodes);
-
-//   let updatedNodes;
-
-//     updatedNodes = nodes.map(node => {
-//             let hidden = false;
-//             if (node.id === 0 || node.id === 54321) {
-//                 hidden = false; // Always show nodes with id 1 and 2
-//             } 
-//             else {
-//                 switch (filterType) {
-//                     case "1":
-//                         hidden = !(node.shape === 'aER' || node.shape === 'rER');
-//                         // Find last node(connected to end) to use later
-
-//     // Iterate backwards through the nodes array
-// for (let i = nodes.length - 1; i >= 0; i--) {
-
-//     const node = nodes[i];
-//       // Find the previous aER node in the array
-//       const prevAER = nodes.slice(0, i).reverse().find(n => n.shape === 'aER');
-
-
-//     if(node.id == 54321){
-//         if(prevAER ){
-//         node.comesAfter = prevAER.id;
-//         }
-//     }
-
-//     // Link all aER nodes together with a comesAfter relation
-//     if (node.shape === 'aER') {
-        
-//         // If there is a previous aER node, set the comesAfter property
-//         if (prevAER) {
-//             node.comesAfter = prevAER.id;
-//         } 
-//         else {
-//             node.comesAfter = 0; // No previous aER, set to a default value
-//         }
-//     }
-// }
-
-                
-//                         break;
-//                     case "2":
-//                         //clear any modifications made to the dataset from View 1
-
-//                         for(const i of nodes){
-//                             if(i.shape == "aER" || i.id == 54321){
-//                                 if(i.id != 54321){
-//                                 i.comesAfter = null
-//                                 }
-//                                 else{
-//                                     var node_id = i.comesAfter
-//                                     var curr = nodes[node_id-3]
-//                                     if( curr && curr.shape == "aER"){
-//                                         i.comesAfter = null
-//                                     }
-//                                     for (let k = nodes.length - 1; k >= 0; k--){
-//                                         let curr = nodes[k];
-//                                         if(curr.shape == "iER"){
-//                                             console.log(curr.id);
-//                                             i.comesAfter = curr.id;
-//                                             break;
-//                                         }
-//                                     }
-                                  
-//                                 }
-//                             }
-//                         }
-//                         hidden = node.shape == 'Atomic ER';
-//                         break;
-//                     case "3":
-//                          //clear any modifications made to the dataset from View 1
-
-//                          for(const i of nodes){
-//                             if(i.shape == "aER" || i.id == 54321){
-//                                 if(i.id != 54321){
-//                                 i.comesAfter = null
-//                                 }
-//                                 else{
-//                                     var node_id = i.comesAfter
-//                                     var curr = nodes[node_id-3]
-//                                     if( curr && curr.shape == "aER"){
-//                                         i.comesAfter = null
-//                                     }
-//                                     for (let k = nodes.length - 1; k >= 0; k--){
-//                                         let curr = nodes[k];
-//                                         if(curr.shape == "iER"){
-//                                             console.log(curr.id);
-//                                             i.comesAfter = curr.id;
-//                                             break;
-//                                         }
-//                                     }
-                                  
-//                                 }
-//                             }
-//                         }
-
-//                         hidden = false; // Show all nodes
-//                         break;
-//                     case "4":
-
-//                      //clear any modifications made to the dataset from View 1
-
-//                      for(const i of nodes){
-//                         if(i.shape == "aER" || i.id == 54321){
-//                             if(i.id != 54321){
-//                             i.comesAfter = null
-//                             }
-//                             else{
-//                                 var node_id = i.comesAfter
-//                                 var curr = nodes[node_id-3]
-//                                 if( curr && curr.shape == "aER"){
-//                                     i.comesAfter = null
-//                                 }
-//                                 for (let k = nodes.length - 1; k >= 0; k--){
-//                                     let curr = nodes[k];
-//                                     if(curr.shape == "iER"){
-//                                         console.log(curr.id);
-//                                         i.comesAfter = curr.id;
-//                                         break;
-//                                     }
-//                                 }
-                              
-//                             }
-//                         }
-//                     }
-
-
-//                         break;
-//                     default:
-//                         hidden = false;
-//                 }
-//             }
-
-//             return {
-//                 ...node,
-//                 hidden
-//             };
-//         });
-//         setNodes([...updatedNodes]);
-
-//     };
 
 
     const handleNodeHover = (event, d) => {
