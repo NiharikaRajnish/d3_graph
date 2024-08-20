@@ -164,11 +164,6 @@ const NetworkGraph = () => {
         }
     };
 
-    const setComesAfterView = (node) => {
-        const currCAProp = `comesAfter${filterType}`;
-        node[currCAProp] = node.comesAfter;
-    }
-
     useEffect(() => {
 
         document.addEventListener('keydown', handleKeyDown);
@@ -753,12 +748,12 @@ const NetworkGraph = () => {
             setSelectedNodes(prevNodes => {
                 const newNodes = [...prevNodes, d];
 
-                //  Show popover if more than one node is selected
-                if (newNodes.length > 1 && shiftRef.current == false) {
-                    setAnchorElMultiNode(event.currentTarget); // Set the popover anchor to the event target
-                } else {
-                    setAnchorElMultiNode(null); // Hide popover if only one node is selected
-                }
+//  Show popover if more than one node is selected
+ if (newNodes.length > 1 && shiftRef.current == false) {
+    setAnchorElMultiNode(event.currentTarget); // Set the popover anchor to the event target
+} else {
+    setAnchorElMultiNode(null); // Hide popover if only one node is selected
+}
 
                 updateNodeBorders(newNodes);
                 return newNodes;
@@ -887,7 +882,6 @@ const NetworkGraph = () => {
 
         })
 
-        parsedData.forEach(node => setComesAfterView(node));
         setNodes(parsedData);
         // setLinks(newLinks);
     };
@@ -942,74 +936,104 @@ const NetworkGraph = () => {
         }
     };
 
-    const handleFilterNodes = (filterType) => {
-        // Update nodes with hidden property based on filterType
-        const currCA = `comesAfter${filterType}`
-        switch (filterType) {
-            case "1":
-                const aERNodes = nodes.filter(node => node.shape === 'aER');
-                // connect all aER, start and end nodes with comesAfter property (ascending ID order)
-                const filteredNodes = aERNodes.sort((a, b) => b.id - a.id);
-                const lastNode = nodes.find(n => n.id === 54321)
-                filteredNodes.forEach((node, index) => {
-                    if (index === 0) {
-                        lastNode.comesAfter = node.id; // connect end node
-                        lastNode[currCA] = node.id; // connect end node
-                        node.comesAfter = filteredNodes[index + 1].id;
-                        node[currCA] = filteredNodes[index + 1].id;
-                    }
-                    else if (index === filteredNodes.length - 1) {
-                        node.comesAfter = 0; // connect start node
-                        node[currCA] = 0; // connect start node
-                    }
-                    else {
-                        node.comesAfter = filteredNodes[index + 1].id;
-                        node[currCA] = filteredNodes[index + 1].id;
-                    }
-                    node.fy = height / 2;
-                });
-                break;
-            case "2":
-                break;
-            case "3":
-            case "4":
-            default:
-                nodes.filter(node => node.shape === 'aER').forEach((node, index) => { node.fy = null });
-                nodes.forEach(node => node.comesAfter = node.comesAfter3);
-                break;
+// Function to save nodes to Local Storage
+const saveNodesToLocalStorage = (nodes) => {
+    localStorage.setItem('nodes', JSON.stringify(nodes));
+};
+
+// Function to load nodes from Local Storage
+const loadNodesFromLocalStorage = () => {
+    const savedNodes = localStorage.getItem('nodes');
+    if (savedNodes) {
+        return JSON.parse(savedNodes);
+    }
+    return null; // Return null if no nodes are saved
+};
+
+const handleFilterNodes = (filterType) => {
+    // Save the updated nodes to Local Storage
+    var saved = loadNodesFromLocalStorage()
+    if( saved == null){
+    saveNodesToLocalStorage(nodes);
+    }
+
+    let updatedNodes = nodes
 
 
-        }
-        const updatedNodes = nodes.map(node => {
-            let hidden = false;
-            if (node.id === 0 || node.id === 54321) {
-                hidden = false; // Always show nodes with id 1 and 2
-            }
-            else {
-                switch (filterType) {
-                    case "1":
-                        hidden = !(node.shape === 'aER' || node.shape === 'rER');
-                        break;
-                    case "2":
-                        hidden = node.shape == 'Atomic ER';
-                        break;
-                    case "3":
-                    case "4":
-                        hidden = false; // Show all nodes
-                        break;
-                    default:
-                        hidden = false;
+    switch (filterType) {
+        case "1":
+            updatedNodes = nodes.map(node => {
+                let hidden = false;
+                if (node.id === 0 || node.id === 54321) {
+                    hidden = false; // Always show nodes with id 1 and 2
+                } 
+                else {   
+                    hidden = !(node.shape === 'aER' || node.shape === 'rER');
                 }
+                       
+    
+        // Iterate backwards through the nodes array
+    for (let i = nodes.length - 1; i >= 0; i--) {
+    
+        const node = nodes[i];
+          // Find the previous aER node in the array
+          const prevAER = nodes.slice(0, i).reverse().find(n => n.shape === 'aER');
+    
+    
+        if(node.id == 54321){
+            if(prevAER ){
+            node.comesAfter = prevAER.id;
             }
+        }
+    
+        // Link all aER nodes together with a comesAfter relation
+        if (node.shape === 'aER') {
+            
+            // If there is a previous aER node, set the comesAfter property
+            if (prevAER) {
+                node.comesAfter = prevAER.id;
+            } 
+            else {
+                node.comesAfter = 0; // No previous aER, set to a default value
+            }
+        }
+    }
+    
+    return { ...node, hidden };
+    });
+    
 
-            return {
-                ...node,
-                hidden
-            };
-        });
-        setNodes([...updatedNodes]);
+            break;
+        case "2":
 
-    };
+            updatedNodes = saved.map(node => {
+                let hidden = node.shape === 'Atomic ER';
+
+                return { ...node, hidden };
+            });
+            break;
+        case "3":
+            updatedNodes = saved.map(node => {
+              
+
+                return { ...node, hidden: false };
+            });
+            break;
+        case "4":
+            updatedNodes = saved.map(node => {
+                // ( custom logic to update nodes in case "4")
+
+                return { ...node, hidden: false };
+            });
+            break;
+        default:
+            updatedNodes = saved.map(node => ({ ...node, hidden: false }));
+            break;
+    }
+
+    // Update the nodes state with the modified nodes
+    setNodes(updatedNodes);
+};
 
 
     const updateNodeBorders = (selected) => {
