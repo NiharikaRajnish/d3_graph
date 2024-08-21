@@ -610,6 +610,7 @@ const NetworkGraph = () => {
         }
         if(selectedNodes){
             for(var i of selectedNodes){
+                if(i != 0){
             i.shape = newShape;
             switch (newShape) {
                 case 'Atomic ER':
@@ -632,6 +633,7 @@ const NetworkGraph = () => {
                     i.color = color('default');
             }
         }
+    }
         setNodes([...nodes]); // Trigger re-render to update node shape and color
     }
 
@@ -646,8 +648,9 @@ const NetworkGraph = () => {
         }
         else if (selectedNodes && selectedNodes.length > 0) {
             for(var i of selectedNodes){
-               console.log(i)
+              if( i != 0){
                 i.size = newSize
+              }
             }
             setNodes([...nodes]);
            
