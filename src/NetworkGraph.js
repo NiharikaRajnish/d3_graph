@@ -8,7 +8,6 @@ import LinkPopover from './LinkPopover';
 import Navbar from './Navbar';
 import { useSlider } from './SliderContext';
 import exportSvg from './ExportSvg'; // Import the function
-import { type } from '@testing-library/user-event/dist/type';
 
 
 
@@ -62,6 +61,7 @@ const NetworkGraph = () => {
         currShownNodesNumRef.current = nodes.filter(n => !n.hidden).length;
         const newLinks = processLinks(nodes);
         setLinks(newLinks);
+        updateSavedNodes();
     }, [nodes]);
 
     // Use Effects for SLides Node Resizing:
@@ -230,18 +230,6 @@ const NetworkGraph = () => {
                             return '#df0d0d';
                     }
                 })
-                .attr('orient', d => {
-                    switch (d.type) {
-                        case 'Assesses':
-                            return 'auto';
-                        case 'Comes After':
-                            return '1';
-                        case 'Is Part Of':
-                            return 'auto';
-                        default:
-                            return 'auto';
-                    }
-                }); // for correcting the orientation of the marker
 
             svg.selectAll('.nodeLabel')
                 .text(d => d.name) // Update node's label text
@@ -265,6 +253,7 @@ const NetworkGraph = () => {
                 return 'rotate( ' + (d.source.x > d.target.x ? 180 : 0) + ', ' + x + ', ' + y + ')';
 
             }).attr('visibility', (d) => (labelsToggled && !d.source.hidden && !d.target.hidden) ? 'visible' : 'hidden');
+
         };
 
         // Create a zoom behavior
@@ -303,8 +292,8 @@ const NetworkGraph = () => {
         // todo: filter based on ER type and selected view/FilterType (maybe eligibilty function type switching)
         // maybe also add ids to links so u kno which ones to keep -- might have to change the way links are stored (temporary view ones and permanent ones)
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(80)) // Link force
-            .force('chargeMB', d3.forceManyBody().strength(filterType === '1' ? 0 : -1000).distanceMax(80).distanceMin(0.01)) // Charge force to repel nodes
+            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(50)) // Link force
+            .force('chargeMB', d3.forceManyBody().strength(filterType === '1' ? 0 : -1000).distanceMax(100).distanceMin(0.01)) // Charge force to repel nodes
             .force('charge', d3.forceCollide().radius(42.5).strength(filterType === '1' ? 0.01 : 1))
             .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
             .force('y', verticalForce(nodes, 1)) // Custom vertical force
@@ -340,7 +329,7 @@ const NetworkGraph = () => {
             // Since each marker is using the same data as each path, its attributes can similarly be modified.
             // Assuming you have a "value" property in each link object, you can manipulate the opacity of a marker just like a path.
             .style("opacity", function (d) { return Math.min(d.value, 1); })
-            .attr("viewBox", "0 -5 10 10")
+            .attr("viewBox", d => d.type === 'Comes After' ? "-10 -5 10 10" : "0 -5 10 10")
             // refX and refY are set to 0 since we will use the radius property of the target node later on, not here.
             .attr("refX", 5)
             .attr("refY", 0)
@@ -349,7 +338,7 @@ const NetworkGraph = () => {
             .attr("orient", "auto")
             .attr("xoverflow", "visible")
             .append("path")
-            .attr("d", "M0,-5L10,0L0,5");
+            .attr("d", (d) => d.type === 'Comes After' ? "M0,-5L-10,0L0,5" : "M0,-5L10,0L0,5");
 
         const legendRect = svg.select('#legend').select('rect')
             .attr('x', width - 330)
@@ -539,6 +528,7 @@ const NetworkGraph = () => {
             setTimeout(() => {
                 simulation.force('center').strength(1); // Add centering force back
                 simulation.velocityDecay(0.4);
+                saveNodesToLocalStorage(nodes, filterType);
             }, 50); // Delay reapplying velocity decay to prevent nodes from suddenly flying off
         }
 
@@ -940,32 +930,87 @@ const NetworkGraph = () => {
     };
 
     // Function to save nodes to Local Storage
-    const saveNodesToLocalStorage = (nodes) => {
-        localStorage.setItem('nodes', JSON.stringify(nodes));
+    const saveNodesToLocalStorage = (nodes, fType) => {
+        // an if statement for whether an fType is passed in or not
+        if (fType == null) {
+            ['1', '2', '3', '4'].forEach(fT => {
+                localStorage.setItem(`nodes${fT}`, JSON.stringify(nodes));
+            })
+        } else {
+            localStorage.setItem(`nodes${fType}`, JSON.stringify(nodes));
+        }
     };
 
     // Function to load nodes from Local Storage
-    const loadNodesFromLocalStorage = () => {
-        const savedNodes = localStorage.getItem('nodes');
+    const loadNodesFromLocalStorage = (fType) => {
+        const savedNodes = localStorage.getItem(`nodes${fType}`);
         if (savedNodes) {
             return JSON.parse(savedNodes);
         }
         return null; // Return null if no nodes are saved
     };
 
-    const handleFilterNodes = (filterType) => {
+    const updateSavedNodes = () => {
+        ['1', '2', '3', '4'].forEach(fT => {
+            const saved = loadNodesFromLocalStorage(fT);
+            if (saved) {
+                const newNodes = nodes.filter(n => !saved.find(s => s.id === n.id));
+                const removedNodes = saved.filter(s => !nodes.find(n => n.id === s.id));
+                removedNodes.forEach(n => {
+                    saved.splice(saved.indexOf(n), 1);
+                });
+                // update the other saved nodes only if the 'comesAfter' 'isPartOf' or 'assesses' properties are affected (Do not change coordinates)
+                saved.forEach(sNode => {
+                    const n = nodes.find(n => n.id === sNode.id);
+                    if (n) {
+                        sNode.name = n.name;
+                        sNode.shape = n.shape;
+                        sNode.type = n.type;
+                        sNode.size = n.size;
+                        sNode.assesses = n.assesses;
+                        sNode.isPartOf = n.isPartOf;
+                        if (n.comesAfter !== sNode.comesAfter && sNode.shape !== 'aER' && sNode.shape !== 'iER') {
+                            sNode.comesAfter = n.comesAfter;
+                        }
+                    }
+                });
+                saveNodesToLocalStorage([...saved, ...newNodes], fT);
+            } else {
+                saveNodesToLocalStorage(nodes, fT);
+            }
+
+        });
+    }
+
+    const handleFilterNodes = (fType) => {
         // Save the updated nodes to Local Storage
-        var saved = loadNodesFromLocalStorage()
+        var saved = loadNodesFromLocalStorage(fType)
         if (saved == null) {
-            saveNodesToLocalStorage(nodes);
+            saveNodesToLocalStorage(nodes, fType);
+            saved = nodes;
         }
 
         let updatedNodes = nodes
 
 
-        switch (filterType) {
+        switch (fType) {
             case "1":
-                updatedNodes = nodes.map(node => {
+                // Iterate backwards through the nodes array
+                // Find all aER nodes in saved array and set the comesAfter property
+                const aERNodes = saved.filter(n => n.shape === 'aER' || n.type === 'start').sort((a, b) => a.id - b.id).reverse();
+                let prevAER = null;
+                aERNodes.forEach((n, i) => {
+                    let savedN = saved.find(s => n.id === s.id)
+                    if (prevAER) {
+                        savedN.comesAfter = prevAER.id;
+                    }
+                    else {
+                        saved.find(n => n.id === 54321).comesAfter = n.id;
+                    }
+                    prevAER = n;
+                });
+
+                updatedNodes = saved.map(node => {
                     let hidden = false;
                     if (node.id === 0 || node.id === 54321) {
                         hidden = false; // Always show nodes with id 1 and 2
@@ -974,33 +1019,6 @@ const NetworkGraph = () => {
                         hidden = !(node.shape === 'aER' || node.shape === 'rER');
                     }
 
-
-                    // Iterate backwards through the nodes array
-                    for (let i = nodes.length - 1; i >= 0; i--) {
-
-                        const node = nodes[i];
-                        // Find the previous aER node in the array
-                        const prevAER = nodes.slice(0, i).reverse().find(n => n.shape === 'aER');
-
-
-                        if (node.id == 54321) {
-                            if (prevAER) {
-                                node.comesAfter = prevAER.id;
-                            }
-                        }
-
-                        // Link all aER nodes together with a comesAfter relation
-                        if (node.shape === 'aER') {
-
-                            // If there is a previous aER node, set the comesAfter property
-                            if (prevAER) {
-                                node.comesAfter = prevAER.id;
-                            }
-                            else {
-                                node.comesAfter = 0; // No previous aER, set to a default value
-                            }
-                        }
-                    }
 
                     return { ...node, hidden };
                 });
