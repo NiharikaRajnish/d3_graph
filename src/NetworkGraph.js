@@ -148,12 +148,12 @@ const NetworkGraph = () => {
             handleAddNode();
         } else if (event.key === '+' && selectedNode && !selectedLink) {
             handleAddLink();
-        }
-        if (event.key === 'Shift') {
+        } else if (event.code === 'KeyA' && event.shiftKey) {
+            setSelectedNodes([...nodes]);
+            updateNodeBorders([...nodes]);
+        } else if (event.key === 'Shift') {
             setShiftPressed(true)
-
         }
-
     };
 
     const handleKeyUp = (event) => {
@@ -505,7 +505,7 @@ const NetworkGraph = () => {
         simulation.alpha(loAlpha).restart(); // Use a lower alpha value to minimize layout disruptions
         prevNodesNumRef.current = currNodesNumRef.current;
         prevShownNodesNumRef.current = currShownNodesNumRef.current;
-        if (shiftRef.current == false) {
+        if (shiftRef.current == false && selectedNodes.length < 2) {
 
             updateNodeBorders(selectedNode ? [selectedNode] : [0]); // Update node borders initially
         }
@@ -634,26 +634,28 @@ const NetworkGraph = () => {
         }
         if (selectedNodes) {
             for (var i of selectedNodes) {
-                i.shape = newShape;
-                switch (newShape) {
-                    case 'Atomic ER':
-                        i.color = '#ADD8E6';
-                        break;
-                    case 'aER':
-                        i.color = 'orange';
-                        i.stroke = "black";
+                if (i != 0) {
+                    i.shape = newShape;
+                    switch (newShape) {
+                        case 'Atomic ER':
+                            i.color = '#ADD8E6';
+                            break;
+                        case 'aER':
+                            i.color = 'orange';
+                            i.stroke = "black";
 
-                        break;
-                    case 'iER':
-                        i.color = 'red';
-                        i.stroke = "black";
-                        break;
-                    case 'rER':
-                        i.color = 'green';
-                        i.stroke = "black";
-                        break;
-                    default:
-                        i.color = color('default');
+                            break;
+                        case 'iER':
+                            i.color = 'red';
+                            i.stroke = "black";
+                            break;
+                        case 'rER':
+                            i.color = 'green';
+                            i.stroke = "black";
+                            break;
+                        default:
+                            i.color = color('default');
+                    }
                 }
             }
             setNodes([...nodes]); // Trigger re-render to update node shape and color
@@ -670,8 +672,9 @@ const NetworkGraph = () => {
         }
         else if (selectedNodes && selectedNodes.length > 0) {
             for (var i of selectedNodes) {
-                console.log(i)
-                i.size = newSize
+                if (i != 0) {
+                    i.size = newSize
+                }
             }
             setNodes([...nodes]);
 
