@@ -13,7 +13,7 @@ import exportSvg from './ExportSvg'; // Import the function
 
 const NetworkGraph = () => {
     let width = window.innerWidth * 0.9,
-        height = window.innerHeight * 0.9;
+        height = window.innerHeight * 0.8;
     const initialNodes = [
         { id: 0, name: 'start', type: 'start', shape: 'diamond', size: 10, color: 'green', fx: 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null }, // Fixed position for start node
         { id: 54321, name: 'end', type: 'end', shape: 'diamond', size: 10, color: 'green', fx: width - 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
@@ -49,6 +49,17 @@ const NetworkGraph = () => {
 
     const radius = 15;
     useEffect(() => {
+        const unloadCallback = (event) => {
+          event.preventDefault();
+          event.returnValue = "";
+          return "";
+        };
+        window.addEventListener("beforeunload", unloadCallback);
+        localStorage.clear();
+        return () => window.removeEventListener("beforeunload", unloadCallback);
+    }, []);
+
+    useEffect(() => {
         shiftRef.current = shiftPressed;
     }, [shiftPressed]);
 
@@ -61,7 +72,7 @@ const NetworkGraph = () => {
         currShownNodesNumRef.current = nodes.filter(n => !n.hidden).length;
         const newLinks = processLinks(nodes);
         setLinks(newLinks);
-        updateSavedNodes();
+        // updateSavedNodes();
     }, [nodes]);
 
     // Use Effects for SLides Node Resizing:
@@ -173,12 +184,12 @@ const NetworkGraph = () => {
             document.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [nodes, links, selectedLink, selectedNode]);
+    }, [links, selectedLink, selectedNode]);
 
     useEffect(() => {
         let loAlpha = 0;
-        if ((Math.abs(prevNodesNumRef.current - currNodesNumRef.current) < 2) && (Math.abs(prevShownNodesNumRef.current - currShownNodesNumRef.current) < 5)) {
-            loAlpha = 0.001;
+        if ((Math.abs(prevShownNodesNumRef.current - currShownNodesNumRef.current) < 2)) {
+            loAlpha = 0.005;
         }
         else {
             loAlpha = 0.16;
@@ -190,9 +201,9 @@ const NetworkGraph = () => {
         const ticked = () => {
 
             svg.selectAll('.node')
-                .attr('transform', d => `translate(${d.x},${d.y})`)
+                .attr('transform', d => `translate(${d.fx || d.x},${d.fy || d.y})`)
                 .attr("cx", (d) => { return d.x = Math.max(radius, Math.min(width - 100 - radius, d.x)); })
-                .attr("cy", (d) => { return d.y = Math.max(radius, Math.min(height - radius, d.y)); })
+                .attr("cy", (d) => { return d.y = Math.max(radius + 100, Math.min(height - 100 - radius, d.y)); })
                 .attr('visibility', d => d.hidden ? 'hidden' : 'visible');
 
 
@@ -282,22 +293,35 @@ const NetworkGraph = () => {
         const verticalForce = (nodes, strength) => {
             return (alpha) => {
                 nodes.forEach(node => {
-                    if (node.comesAfter !== null && node.comesAfter !== undefined) {
+                    if (node.comesAfter !== null && node.comesAfter !== undefined && nodes.find(n => n.comesAfter === node.id)) {
                         // Apply vertical force to nodes with comesAfter property
                         node.vy -= strength * (node.y - height / 2) * alpha; // Adjust to pull nodes to vertical center
+                    } else {
+                        node.vy += strength * (node.y - height / 2) * alpha * (filterType === '1' ? 1 : 0.25);
                     }
                 });
             };
         };
         // todo: filter based on ER type and selected view/FilterType (maybe eligibilty function type switching)
         // maybe also add ids to links so u kno which ones to keep -- might have to change the way links are stored (temporary view ones and permanent ones)
-        const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(50)) // Link force
-            .force('chargeMB', d3.forceManyBody().strength(filterType === '1' ? 0 : -1000).distanceMax(100).distanceMin(0.01)) // Charge force to repel nodes
-            .force('charge', d3.forceCollide().radius(42.5).strength(filterType === '1' ? 0.01 : 1))
+        const simulation = d3.forceSimulation(nodes.filter(n => !n.hidden))
+            .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(75)) // Link force
+            .force('chargeMB', d3.forceManyBody().strength(-1000).distanceMax(100).distanceMin(0.01)) // Charge force to repel nodes
+            .force('charge', d3.forceCollide().radius(42.5))
             .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
             .force('y', verticalForce(nodes, 1)) // Custom vertical force
-            .on('tick', ticked);
+            .on('tick', ticked)
+            .on('end',
+                () => {
+                    nodes.forEach(d => {
+                        if (!d.fixed) {
+                            d.fy = Math.max(radius + 100, Math.min(height - 100 - radius, d.y));
+                            d.fx = Math.max(radius, Math.min(width - 100 - radius, d.x));
+                            d.fixed = true;
+                        }
+                    })
+                    updateSavedNodes();
+                });
 
 
         const defaultMarkers = [{ type: 'Assesses', source: { id: -1 }, target: { id: -1 } }, { type: 'Comes After', source: { id: -2 }, target: { id: -2 } }, { type: 'Is Part Of', source: { id: -3 }, target: { id: -3 } }]
@@ -381,7 +405,7 @@ const NetworkGraph = () => {
             .text((d) => d.type)
             .style('font-size', 9);
         const link = svg.select('#main').selectAll('.link')
-            .data(links, d => `${d.source.id}-${d.target.id}`);
+            .data(links.filter(l => !l.hidden), d => `${d.source.id}-${d.target.id}`);
 
         link.exit().remove();
 
@@ -435,7 +459,7 @@ const NetworkGraph = () => {
             .text(d => d.type);
 
         const node = svg.select('#main').selectAll('.node')
-            .data(nodes, d => d.id);
+            .data(nodes.filter(n => !n.hidden), d => d.id);
 
 
         node.exit().remove();
@@ -489,8 +513,6 @@ const NetworkGraph = () => {
         node.merge(nodeEnter)
             .attr('transform', d => `translate(${d.fx},${d.fy})`)
 
-        simulation.nodes(nodes)
-        simulation.force('link').links(links);
         simulation.alpha(loAlpha).restart(); // Use a lower alpha value to minimize layout disruptions
         prevNodesNumRef.current = currNodesNumRef.current;
         prevShownNodesNumRef.current = currShownNodesNumRef.current;
@@ -508,22 +530,26 @@ const NetworkGraph = () => {
                 d.fx = d.x;
                 d.fy = d.y;
             }
+            // nodes.forEach(n => { n.fx = n.x; n.fy = n.y; });
             simulation.velocityDecay(0.7); // reduce jiterriness
             simulation.force('center').strength(0.1);
         }
 
         function dragged(event, d) {
-            if (!d.fixed) {
+            if (d.type !== 'start' && d.type !== 'end') {
                 d.fx = event.x;
                 d.fy = event.y;
             }
         }
 
         function dragEnded(event, d) {
-            if (!event.active) simulation.alphaTarget(0.001);
+            if (!event.active) simulation.alphaTarget(0);
             if (!d.fixed) {
                 d.fx = null;
                 d.fy = null;
+            } else if (d.type !== 'start' && d.type !== 'end') {
+                d.fx = Math.max(radius, Math.min(width - 100 - radius, d.fx));
+                d.fy = Math.max(radius + 100, Math.min(height - 100 - radius, d.fy));
             }
             setTimeout(() => {
                 simulation.force('center').strength(1); // Add centering force back
@@ -803,7 +829,7 @@ const NetworkGraph = () => {
     };
 
     const parseCSV = (data) => {
-        let parsedData = d3.csvParse(data, ({ identifier, title, description, url, type, isPartOf, isFormatOf, assesses, comesAfter }) => {
+        let parsedData = d3.csvParse(data, ({ identifier, title, description, url, type, isPartOf, isFormatOf, assesses, comesAfter, fx, fy }) => {
             const node = {
                 id: +identifier,
                 name: title,
@@ -815,6 +841,9 @@ const NetworkGraph = () => {
                 isFormatOf: +isFormatOf,
                 assesses: assesses ? +assesses : null,
                 comesAfter: comesAfter ? +comesAfter : null,
+                fx: fx ? +fx : null,
+                fy: fy ? +fy : null,
+                fixed: (fx || fy) ? true : false,
                 shape: type in { 'Atomic ER': 1, 'aER': 1, 'iER': 1, 'rER': 1 } ? type : 'Atomic ER',
             }
             return node
@@ -832,7 +861,7 @@ const NetworkGraph = () => {
         let tmpID = -5
         let lastFx = 0
         parsedData.forEach((node, index) => {
-            if (node.shape === 'iER') {
+            if (node.shape === 'iER' && !(node.fx || node.fy)) {
                 cnt++;
                 tmpID = node.id;
                 node.fixed = true;
@@ -840,7 +869,7 @@ const NetworkGraph = () => {
                 node.fx = (cnt * (width / iERNodes.length)) - (width * 0.2);
                 lastFx = node.fx;
             }
-            else if (node.shape === 'aER') {
+            else if (node.shape === 'aER' && !(node.fx || node.fy)) {
                 node.fy = node.comesAfter ? (height) / 2 : null;
             }
         });
@@ -885,19 +914,19 @@ const NetworkGraph = () => {
             if (typeof node.isPartOf == 'number') {
                 const targetNode = parsedData.find(n => n.id === node.isPartOf);
                 if (targetNode) {
-                    newLinks.push({ source: node.id, target: targetNode.id, type: 'Is Part Of' });
+                    newLinks.push({ source: node.id, target: targetNode.id, type: 'Is Part Of', hidden: node.hidden || targetNode.hidden });
                 }
             }
             if (typeof node.assesses == 'number') {
                 const targetNode = parsedData.find(n => n.id === node.assesses);
                 if (targetNode) {
-                    newLinks.push({ source: node.id, target: targetNode.id, type: 'Assesses' });
+                    newLinks.push({ source: node.id, target: targetNode.id, type: 'Assesses', hidden: node.hidden || targetNode.hidden });
                 }
             }
             if (typeof node.comesAfter == 'number') {
                 const targetNode = parsedData.find(n => n.id === node.comesAfter);
                 if (targetNode) {
-                    newLinks.push({ source: node.id, target: targetNode.id, type: 'Comes After' });
+                    newLinks.push({ source: node.id, target: targetNode.id, type: 'Comes After', hidden: node.hidden || targetNode.hidden });
                 }
             }
         });
@@ -969,13 +998,13 @@ const NetworkGraph = () => {
                         sNode.size = n.size;
                         sNode.assesses = n.assesses;
                         sNode.isPartOf = n.isPartOf;
-                        if (n.comesAfter !== sNode.comesAfter && sNode.shape !== 'aER' && sNode.shape !== 'iER') {
+                        if (n.comesAfter !== sNode.comesAfter && sNode.shape !== 'aER' && sNode.shape !== 'iER' && sNode.shape !== 'diamond') {
                             sNode.comesAfter = n.comesAfter;
                         }
                     }
                 });
                 saveNodesToLocalStorage([...saved, ...newNodes], fT);
-            } else {
+            } else if (fT === '3') {
                 saveNodesToLocalStorage(nodes, fT);
             }
 
@@ -985,74 +1014,78 @@ const NetworkGraph = () => {
     const handleFilterNodes = (fType) => {
         // Save the updated nodes to Local Storage
         var saved = loadNodesFromLocalStorage(fType)
+        let updatedNodes = saved || []
         if (saved == null) {
-            saveNodesToLocalStorage(nodes, fType);
-            saved = nodes;
-        }
+            saved = loadNodesFromLocalStorage('3') ?? nodes;
 
-        let updatedNodes = nodes
+            switch (fType) {
+                case "1":
+                    // Iterate backwards through the nodes array
+                    // Find all aER nodes in saved array and set the comesAfter property
+                    const aERNodes = saved.filter(n => n.shape === 'aER' || n.type === 'end').sort((a, b) => a.id - b.id);
+                    let prevAER = null;
+                    aERNodes.forEach((n, i) => {
+                        let savedN = saved.find(s => n.id === s.id)
+                        if (prevAER) {
+                            savedN.comesAfter = prevAER.id;
+                        }
+                        else {
+                            n.comesAfter = 0;
+                        }
+                        prevAER = n;
+                        n.fx = (n.type === 'end') ? n.fx : ((i + 1) * (width / (aERNodes.length - 1))) - (width * 0.2);
 
+                    });
 
-        switch (fType) {
-            case "1":
-                // Iterate backwards through the nodes array
-                // Find all aER nodes in saved array and set the comesAfter property
-                const aERNodes = saved.filter(n => n.shape === 'aER' || n.type === 'start').sort((a, b) => a.id - b.id).reverse();
-                let prevAER = null;
-                aERNodes.forEach((n, i) => {
-                    let savedN = saved.find(s => n.id === s.id)
-                    if (prevAER) {
-                        savedN.comesAfter = prevAER.id;
-                    }
-                    else {
-                        saved.find(n => n.id === 54321).comesAfter = n.id;
-                    }
-                    prevAER = n;
-                });
-
-                updatedNodes = saved.map(node => {
-                    let hidden = false;
-                    if (node.id === 0 || node.id === 54321) {
-                        hidden = false; // Always show nodes with id 1 and 2
-                    }
-                    else {
-                        hidden = !(node.shape === 'aER' || node.shape === 'rER');
-                    }
+                    updatedNodes = saved.map(node => {
+                        let hidden = false;
+                        if (node.id === 0 || node.id === 54321) {
+                            hidden = false; // Always show nodes with id 1 and 2
+                        }
+                        else {
+                            hidden = !(node.shape === 'aER' || node.shape === 'rER');
+                        }
+                        node.fy = (node.shape === 'aER' || node.shape === 'diamond') ? height / 2 : node.y;
 
 
-                    return { ...node, hidden };
-                });
+                        return { ...node, hidden };
+                    });
 
 
-                break;
-            case "2":
+                    break;
+                case "2":
 
-                updatedNodes = saved.map(node => {
-                    let hidden = node.shape === 'Atomic ER';
+                    updatedNodes = saved.map(node => {
+                        let hidden = node.shape === 'Atomic ER';
+                        if (node.id === 54321) {
+                            node.comesAfter = saved.filter(n => n.shape === 'iER').sort((a, b) => a.id - b.id).slice(-1)[0].id; //ensure last comesAfter shows
+                        }
+                        node.fy = ((node.shape === 'aER' && node.comesAfter != null && saved.find(s => s.comesAfter === node.id)) || node.shape === 'iER' || node.shape === 'diamond') ? height / 2 : node.y;
+                        return { ...node, hidden };
+                    });
+                    break;
+                case "3":
+                    updatedNodes = saved.map(node => {
 
-                    return { ...node, hidden };
-                });
-                break;
-            case "3":
-                updatedNodes = saved.map(node => {
 
+                        return { ...node, hidden: false };
+                    });
+                    break;
+                case "4":
+                    updatedNodes = saved.map(node => {
+                        // ( custom logic to update nodes in case "4")
 
-                    return { ...node, hidden: false };
-                });
-                break;
-            case "4":
-                updatedNodes = saved.map(node => {
-                    // ( custom logic to update nodes in case "4")
-
-                    return { ...node, hidden: false };
-                });
-                break;
-            default:
-                updatedNodes = saved.map(node => ({ ...node, hidden: false }));
-                break;
+                        return { ...node, hidden: false };
+                    });
+                    break;
+                default:
+                    updatedNodes = saved.map(node => ({ ...node, hidden: false }));
+                    break;
+            }
         }
 
         // Update the nodes state with the modified nodes
+        saveNodesToLocalStorage(updatedNodes, fType);
         setNodes(updatedNodes);
     };
 
@@ -1083,7 +1116,7 @@ const NetworkGraph = () => {
     }
 
     function downloadCSV() {
-        let csvContent = "ID,name,alternative title,target URL,type,isPartOf,assesses,comesAfter\n";
+        let csvContent = "identifier,title,description,url,type,isPartOf,assesses,comesAfter,fx,fy\n";
         nodes.forEach(node => {
             if (node.alternativeTitle == undefined) {
                 node.alternativeTitle = ""
@@ -1091,7 +1124,7 @@ const NetworkGraph = () => {
             if (node.targetURL == undefined) {
                 node.targetURL = ""
             }
-            csvContent += `${node.id},${node.name},${node.alternativeTitle},${node.targetURL},${node.type},${node.isPartOf || ""},${node.assesses || ""},${node.comesAfter || ""}\n`;
+            csvContent += `${node.id},${node.name},${node.alternativeTitle},${node.targetURL},${node.type},${node.isPartOf || ""},${node.assesses || ""},${node.comesAfter || ""},${node.fx},${node.fy}\n`;
         });
 
         let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
