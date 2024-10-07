@@ -50,9 +50,9 @@ const NetworkGraph = () => {
     const radius = 15;
     useEffect(() => {
         const unloadCallback = (event) => {
-          event.preventDefault();
-          event.returnValue = "";
-          return "";
+            event.preventDefault();
+            event.returnValue = "";
+            return "";
         };
         window.addEventListener("beforeunload", unloadCallback);
         localStorage.clear();
@@ -320,7 +320,7 @@ const NetworkGraph = () => {
                             d.fixed = true;
                         }
                     })
-                    updateSavedNodes();
+                    saveNodesToLocalStorage(nodes, filterType);
                 });
 
 
@@ -676,7 +676,7 @@ const NetworkGraph = () => {
             }
             setNodes([...nodes]); // Trigger re-render to update node shape and color
         }
-
+        updateSavedNodes();
 
     };
 
@@ -695,6 +695,7 @@ const NetworkGraph = () => {
             setNodes([...nodes]);
 
         }
+        updateSavedNodes();
     };
     const handleTypeChange = (newType) => {
         if (selectedLink) {
@@ -721,6 +722,7 @@ const NetworkGraph = () => {
                     break;
             }
             setNodes([...nodes]); // Trigger re-render to update link type
+            updateSavedNodes();
         }
     };
 
@@ -728,6 +730,7 @@ const NetworkGraph = () => {
         if (selectedNode) {
             selectedNode.name = newName;
             setNodes([...nodes]); // Trigger re-render to update node name
+            updateSavedNodes();
             // setLinks([...links]);
         }
     };
@@ -738,6 +741,7 @@ const NetworkGraph = () => {
         const name = `ER ${id}`;
         const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, assesses: null, isPartOf: null, comesAfter: null };
         setNodes([...nodes, newNode]);
+        updateSavedNodes();
         // setLinks([...links]);
 
     };
@@ -754,12 +758,11 @@ const NetworkGraph = () => {
             setNodes(nodes.filter(n => !selectedIds.includes(n.id)));
 
         }
-
-
         else {
             setLinkingMessage('Select a node to delete');
             setTimeout(() => setLinkingMessage(''), 2000); // Clear the message after 2 seconds
         }
+        updateSavedNodes();
     };
 
     function nodeClicked(event, d) {
@@ -790,8 +793,8 @@ const NetworkGraph = () => {
                 // const cLN = nodes.find(n => n.id === currentLinkingNode.id)
                 if (!existingLink) {
                     currLN.comesAfter = d.id
-
                     setNodes([...nodes]);
+                    updateSavedNodes();
                     // setLinks(prevLinks => [...prevLinks, { source: currentLinkingNode, target: d, type: 'Comes After' }]);
                 }
 
@@ -952,6 +955,7 @@ const NetworkGraph = () => {
             // ?setLinks(links.filter(l => l !== selectedLink));
             setSelectedLink(null);
             setNodes([...nodes]);
+            updateSavedNodes();
         } else {
             setLinkingMessage('Select a link to delete');
             setTimeout(() => setLinkingMessage(''), 2000); // Clear the message after 2 seconds
@@ -1000,6 +1004,8 @@ const NetworkGraph = () => {
                         sNode.isPartOf = n.isPartOf;
                         if (n.comesAfter !== sNode.comesAfter && sNode.shape !== 'aER' && sNode.shape !== 'iER' && sNode.shape !== 'diamond') {
                             sNode.comesAfter = n.comesAfter;
+                        } else if (sNode.shape === 'diamond' && n.comesAfter !== sNode.comesAfter) {
+                            sNode.comesAfter = n.comesAfter;
                         }
                     }
                 });
@@ -1013,76 +1019,74 @@ const NetworkGraph = () => {
 
     const handleFilterNodes = (fType) => {
         // Save the updated nodes to Local Storage
-        var saved = loadNodesFromLocalStorage(fType)
+        var saved = loadNodesFromLocalStorage(fType) ?? loadNodesFromLocalStorage('3') ?? nodes
         let updatedNodes = saved || []
-        if (saved == null) {
-            saved = loadNodesFromLocalStorage('3') ?? nodes;
 
-            switch (fType) {
-                case "1":
-                    // Iterate backwards through the nodes array
-                    // Find all aER nodes in saved array and set the comesAfter property
-                    const aERNodes = saved.filter(n => n.shape === 'aER' || n.type === 'end').sort((a, b) => a.id - b.id);
-                    let prevAER = null;
-                    aERNodes.forEach((n, i) => {
-                        let savedN = saved.find(s => n.id === s.id)
-                        if (prevAER) {
-                            savedN.comesAfter = prevAER.id;
-                        }
-                        else {
-                            n.comesAfter = 0;
-                        }
-                        prevAER = n;
-                        n.fx = (n.type === 'end') ? n.fx : ((i + 1) * (width / (aERNodes.length - 1))) - (width * 0.2);
+        switch (fType) {
+            case "1":
+                // Iterate backwards through the nodes array
+                // Find all aER nodes in saved array and set the comesAfter property
+                const aERNodes = saved.filter(n => n.shape === 'aER' || n.type === 'end').sort((a, b) => a.id - b.id);
+                let prevAER = null;
+                aERNodes.forEach((n, i) => {
+                    let savedN = saved.find(s => n.id === s.id)
+                    if (prevAER) {
+                        savedN.comesAfter = prevAER.id;
+                    }
+                    else {
+                        n.comesAfter = 0;
+                    }
+                    prevAER = n;
+                    n.fx = (n.type === 'end') ? n.fx : ((i + 1) * (width / (aERNodes.length - 1))) - (width * 0.2);
 
-                    });
+                });
 
-                    updatedNodes = saved.map(node => {
-                        let hidden = false;
-                        if (node.id === 0 || node.id === 54321) {
-                            hidden = false; // Always show nodes with id 1 and 2
-                        }
-                        else {
-                            hidden = !(node.shape === 'aER' || node.shape === 'rER');
-                        }
-                        node.fy = (node.shape === 'aER' || node.shape === 'diamond') ? height / 2 : node.y;
+                updatedNodes = saved.map(node => {
+                    let hidden = false;
+                    if (node.id === 0 || node.id === 54321) {
+                        hidden = false; // Always show nodes with id 1 and 2
+                    }
+                    else {
+                        hidden = !(node.shape === 'aER' || node.shape === 'rER');
+                    }
+                    node.fy = (node.shape === 'aER' || node.shape === 'diamond') ? height / 2 : node.y;
 
 
-                        return { ...node, hidden };
-                    });
+                    return { ...node, hidden };
+                });
 
 
-                    break;
-                case "2":
+                break;
+            case "2":
 
-                    updatedNodes = saved.map(node => {
-                        let hidden = node.shape === 'Atomic ER';
-                        if (node.id === 54321) {
-                            node.comesAfter = saved.filter(n => n.shape === 'iER').sort((a, b) => a.id - b.id).slice(-1)[0].id; //ensure last comesAfter shows
-                        }
-                        node.fy = ((node.shape === 'aER' && node.comesAfter != null && saved.find(s => s.comesAfter === node.id)) || node.shape === 'iER' || node.shape === 'diamond') ? height / 2 : node.y;
-                        return { ...node, hidden };
-                    });
-                    break;
-                case "3":
-                    updatedNodes = saved.map(node => {
+                updatedNodes = saved.map(node => {
+                    let hidden = node.shape === 'Atomic ER';
+                    if (node.id === 54321) {
+                        node.comesAfter = saved.filter(n => n.shape === 'iER').sort((a, b) => a.id - b.id).slice(-1)[0].id; //ensure last comesAfter shows
+                    }
+                    node.fy = ((node.shape === 'aER' && node.comesAfter != null && saved.find(s => s.comesAfter === node.id)) || node.shape === 'iER' || node.shape === 'diamond') ? height / 2 : node.y;
+                    return { ...node, hidden };
+                });
+                break;
+            case "3":
+                updatedNodes = saved.map(node => {
 
 
-                        return { ...node, hidden: false };
-                    });
-                    break;
-                case "4":
-                    updatedNodes = saved.map(node => {
-                        // ( custom logic to update nodes in case "4")
+                    return { ...node, hidden: false };
+                });
+                break;
+            case "4":
+                updatedNodes = saved.map(node => {
+                    // ( custom logic to update nodes in case "4")
 
-                        return { ...node, hidden: false };
-                    });
-                    break;
-                default:
-                    updatedNodes = saved.map(node => ({ ...node, hidden: false }));
-                    break;
-            }
+                    return { ...node, hidden: false };
+                });
+                break;
+            default:
+                updatedNodes = saved.map(node => ({ ...node, hidden: false }));
+                break;
         }
+
 
         // Update the nodes state with the modified nodes
         saveNodesToLocalStorage(updatedNodes, fType);
@@ -1124,7 +1128,7 @@ const NetworkGraph = () => {
             if (node.targetURL == undefined) {
                 node.targetURL = ""
             }
-            csvContent += `${node.id},${node.name},${node.alternativeTitle},${node.targetURL},${node.type},${node.isPartOf || ""},${node.assesses || ""},${node.comesAfter || ""},${node.fx},${node.fy}\n`;
+            csvContent += `${node.id},"${node.name}","${node.alternativeTitle}","${node.targetURL}",${node.type},${node.isPartOf || ""},${node.assesses || ""},${node.comesAfter || ""},${node.fx},${node.fy}\n`;
         });
 
         let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
