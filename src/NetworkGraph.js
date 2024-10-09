@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { Alert, Button, FormControlLabel, FormGroup, Switch, Typography } from '@mui/material';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, FormControlLabel, FormGroup, Slide, Stack, Switch, Typography } from '@mui/material';
 import { MenuItem, Select, FormControl, InputLabel } from '@mui/material';
 import { Add, ErrorOutline, Visibility } from '@mui/icons-material';
 import NodePopover from './NodePopover';
@@ -8,6 +8,7 @@ import LinkPopover from './LinkPopover';
 import Navbar from './Navbar';
 import { useSlider } from './SliderContext';
 import exportSvg from './ExportSvg'; // Import the function
+import { CgTrashEmpty } from 'react-icons/cg';
 
 
 
@@ -20,7 +21,7 @@ const NetworkGraph = () => {
     ];
     const initialLinks = [];
 
-    const [nodes, setNodes] = useState(initialNodes);
+    const [nodes, setNodes] = useState(localStorage.getItem('nodes3') ? JSON.parse(localStorage.getItem('nodes3')) : initialNodes);
     const [links, setLinks] = useState(initialLinks);
     const [selectedNode, setSelectedNode] = useState(null);
     const [shiftPressed, setShiftPressed] = useState(false);
@@ -33,6 +34,7 @@ const NetworkGraph = () => {
     const [linkingNode, setLinkingNode] = useState(null);
     const [legendToggled, setLegendToggled] = useState(false);
     const [labelsToggled, setLabelsToggled] = useState(false);
+    const [dialogOpen, setDialogOpen] = useState(false);
     const [linkingMessage, setLinkingMessage] = useState('');
     const [filterType, setFilterType] = useState('3');
     const [isAlertError, setIsAlertError] = useState(false);
@@ -48,16 +50,17 @@ const NetworkGraph = () => {
 
 
     const radius = 15;
-    useEffect(() => {
-        const unloadCallback = (event) => {
-            event.preventDefault();
-            event.returnValue = "";
-            return "";
-        };
-        window.addEventListener("beforeunload", unloadCallback);
-        localStorage.clear();
-        return () => window.removeEventListener("beforeunload", unloadCallback);
-    }, []);
+    // useEffect(() => {
+    //     const unloadCallback = (event) => {
+    //         event.preventDefault();
+    //         event.returnValue = "";
+    //         return "";
+    //     };
+    //     window.addEventListener("beforeunload", unloadCallback);
+    //     // localStorage.clear();
+    //     // localStorage.getItem('nodes3') && setNodes(loadNodesFromLocalStorage('3'));
+    //     return () => window.removeEventListener("beforeunload", unloadCallback);
+    // }, []);
 
     useEffect(() => {
         shiftRef.current = shiftPressed;
@@ -731,7 +734,6 @@ const NetworkGraph = () => {
             selectedNode.name = newName;
             setNodes([...nodes]); // Trigger re-render to update node name
             updateSavedNodes();
-            // setLinks([...links]);
         }
     };
 
@@ -742,15 +744,22 @@ const NetworkGraph = () => {
         const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, assesses: null, isPartOf: null, comesAfter: null };
         setNodes([...nodes, newNode]);
         updateSavedNodes();
-        // setLinks([...links]);
 
+    };
+
+    const handleClear = (yn) => {
+        if (yn) {
+            localStorage.clear();
+            setNodes([...nodes.filter((n) => (n.id === 54321) || (n.id === 0))]);
+            updateSavedNodes();
+        }
+        setDialogOpen(false)
     };
 
     const handleRemoveNode = () => {
         if (selectedNode) {
             const nodeId = selectedNode.id;
             setNodes(nodes.filter(n => n.id !== nodeId));
-            // setLinks(links.filter(l => l.source.id !== nodeId && l.target.id !== nodeId));
             setSelectedNode(null);
         }
         else if (selectedNodes) {
@@ -1019,9 +1028,9 @@ const NetworkGraph = () => {
 
     const handleFilterNodes = (fType) => {
         // Save the updated nodes to Local Storage
-        var saved = loadNodesFromLocalStorage(fType) ?? loadNodesFromLocalStorage('3') ?? nodes
-        let updatedNodes = saved || []
-
+        var saved = loadNodesFromLocalStorage(fType) ?? loadNodesFromLocalStorage('3') ?? []
+        saved = (saved.length > 2 || nodes.length === saved.length) ? saved : nodes
+        let updatedNodes = [];
         switch (fType) {
             case "1":
                 // Iterate backwards through the nodes array
@@ -1062,7 +1071,7 @@ const NetworkGraph = () => {
                 updatedNodes = saved.map(node => {
                     let hidden = node.shape === 'Atomic ER';
                     if (node.id === 54321) {
-                        node.comesAfter = saved.filter(n => n.shape === 'iER').sort((a, b) => a.id - b.id).slice(-1)[0].id; //ensure last comesAfter shows
+                        node.comesAfter = saved.filter(n => n.shape === 'iER').sort((a, b) => a.id - b.id).slice(-1)[0]?.id; //ensure last comesAfter shows
                     }
                     node.fy = ((node.shape === 'aER' && node.comesAfter != null && saved.find(s => s.comesAfter === node.id)) || node.shape === 'iER' || node.shape === 'diamond') ? height / 2 : node.y;
                     return { ...node, hidden };
@@ -1144,6 +1153,10 @@ const NetworkGraph = () => {
         }
     }
 
+    const Transition = React.forwardRef(function Transition(props, ref) {
+        return <Slide direction="up" ref={ref} {...props} />;
+    });
+
     function handleExportClick() {
         exportSvg(svgRef.current, 'my-d3-graph.svg');
     };
@@ -1152,19 +1165,22 @@ const NetworkGraph = () => {
         <div>
             <div className='navbar'>
                 <Navbar onExportClick={handleExportClick} onDownloadCSV={downloadCSV} />
-                <div className='buttons'>
-                    <input
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileUpload}
-                        style={{ display: 'none' }}
-                        id="csv-upload"
-                    />
-                    <label htmlFor="csv-upload">
-                        <Button variant="contained" component="span">
-                            Upload CSV
-                        </Button>
-                    </label>
+                <Stack m={'0 auto'} spacing={0.5} direction='row'>
+                    <>
+                        <input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleFileUpload}
+                            style={{ display: 'none' }}
+                            id="csv-upload"
+                        />
+                        <label htmlFor="csv-upload">
+                            <Button variant="contained" component="span">
+                                Upload CSV
+                            </Button>
+                        </label>
+                    </>
+                    <Button onClick={() => setDialogOpen(true)} color={'error'} startIcon={<CgTrashEmpty />} variant="contained">Clear</Button>
                     <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
                     <Button id='recenterButton' variant="outlined">Recenter</Button>
                     <FormControlLabel sx={{ marginLeft: '2px' }}
@@ -1175,7 +1191,7 @@ const NetworkGraph = () => {
                         control={<Switch size="small" checked={legendToggled} onChange={() => setLegendToggled(!legendToggled)} />}
                         label={`${legendToggled ? 'Hide' : 'Show'} Legend`}
                     />
-                </div>
+                </Stack>
                 {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
 
                 <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
@@ -1194,7 +1210,26 @@ const NetworkGraph = () => {
                         <MenuItem value="4">View 4: Requirements</MenuItem>
                     </Select>
                 </FormControl>
-            </div>            <svg ref={svgRef} width='100%' height='100%' viewBox={`0 0 ${width} ${height}`}>
+            </div>
+            {dialogOpen && <Dialog
+                open={dialogOpen}
+                TransitionComponent={Transition}
+                keepMounted
+                onClose={() => setDialogOpen(false)}
+                aria-describedby="alert-dialog-slide-description"
+            >
+                <DialogTitle>{"Clear and reset all data?"}</DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="alert-dialog-slide-description">
+                        Do you confirm clearing all your Educational Resources' data for this session?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button color={'error'} onClick={() => handleClear(false)}>Dismiss</Button>
+                    <Button onClick={() => handleClear(true)}>Agree</Button>
+                </DialogActions>
+            </Dialog>}
+            <svg ref={svgRef} width='100%' height='100%' viewBox={`0 0 ${width} ${height}`}>
                 <g id='main'>
                 </g>
                 {legendToggled && (<g id='legend'><rect></rect></g>)}
