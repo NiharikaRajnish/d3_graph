@@ -838,6 +838,7 @@ const NetworkGraph = () => {
             };
             reader.readAsText(file);
         }
+        event.target.value = ''; // Clear the file input after processing
     };
 
     const parseCSV = (data) => {
