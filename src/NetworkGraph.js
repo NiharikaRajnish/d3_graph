@@ -1030,7 +1030,16 @@ const NetworkGraph = () => {
         // Save the updated nodes to Local Storage
         var saved = loadNodesFromLocalStorage(fType) ?? loadNodesFromLocalStorage('3') ?? []
         saved = (saved.length > 2 || nodes.length === saved.length) ? saved : nodes
-        let updatedNodes = [];
+         
+    // Reset nodes to avoid issues when switching views
+    let resetNodes = saved.map(node => ({
+        ...node,
+        hidden: false,      // Ensure nodes are visible initially
+        comesAfter: (node.shape === 'aER' || node.shape === 'rER') ? null : node.comesAfter,   // Reset comesAfter only for aER and rER
+
+    }));
+
+    let updatedNodes = [];
         switch (fType) {
             case "1":
                 // Iterate backwards through the nodes array
@@ -1068,7 +1077,7 @@ const NetworkGraph = () => {
                 break;
             case "2":
 
-                updatedNodes = saved.map(node => {
+                updatedNodes = resetNodes.map(node => {
                     let hidden = node.shape === 'Atomic ER';
                     if (node.id === 54321) {
                         node.comesAfter = saved.filter(n => n.shape === 'iER').sort((a, b) => a.id - b.id).slice(-1)[0]?.id; //ensure last comesAfter shows
@@ -1078,7 +1087,7 @@ const NetworkGraph = () => {
                 });
                 break;
             case "3":
-                updatedNodes = saved.map(node => {
+                updatedNodes = resetNodes.map(node => {
 
 
                     return { ...node, hidden: false };
