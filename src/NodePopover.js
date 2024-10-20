@@ -10,10 +10,17 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
         setNewName(event.target.value);
     };
 
-    const handleRenameClick = () => {
-        handleRenameNode(newName); // Update selectedNode's name
-        onClose();
-    };
+
+  // Handle Enter key to rename the node
+  const handleRenameOnEnter = (event) => {
+    if (event.key === 'Enter') {
+      handleRenameNode(newName);  // Rename the node
+      onClose();  // Close the popover
+    }
+  };
+
+
+
 
     const handleRemoveClick = () => {
         handleRemoveNode(newName); // remove selectedNode
@@ -101,19 +108,11 @@ if(selectedNode != ""){
     label="Rename ER"
     value={newName}
     onChange={handleChangeName}
+    onKeyDown={handleRenameOnEnter}
     margin="dense"
     size="small"
     style={{ marginLeft: '4px', width: '150px' }}
 />
-            <Button
-                onClick={handleRenameClick}
-                variant="outlined"
-                color="primary"
-                size="small"
-                style={{ marginLeft: '4px', width: '20px' }}
-            >
-                Rename
-            </Button>
             <Button
                 // startIcon={<Remove/>}
                 onClick={handleRemoveClick}
