@@ -35,6 +35,7 @@ const NetworkGraph = () => {
     const [legendToggled, setLegendToggled] = useState(false);
     const [labelsToggled, setLabelsToggled] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [dialogOpen2, setDialogOpen2] = useState(false);
     const [linkingMessage, setLinkingMessage] = useState('');
     const [filterType, setFilterType] = useState('3');
     const [isAlertError, setIsAlertError] = useState(false);
@@ -48,6 +49,7 @@ const NetworkGraph = () => {
     const linkingNodeRef = useRef(linkingNode);
     const { sliderValue, setSliderValue, aERSliderValue, setaERSliderValue, iERSliderValue, setIERSliderValue, rERSliderValue, setrERSliderValue, atomicSliderValue, setatomicSliderValue } = useSlider();
     const shiftRef = useRef(shiftPressed);
+    const fileInputRef = useRef(null); // Use ref to trigger file input
 
 
     const radius = 15;
@@ -865,6 +867,19 @@ const NetworkGraph = () => {
             }
         }
     }
+
+    const handleAgree = () => {
+        setDialogOpen2(false); // Close the dialog
+
+        // Create a temporary input and click it to open file chooser
+        const tempInput = document.createElement('input');
+        tempInput.type = 'file';
+        tempInput.accept = '.csv';
+        tempInput.onchange = handleFileUpload;  // Attach the handler
+        tempInput.click();  // Open the file chooser
+    };
+
+
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (file) {
@@ -1227,15 +1242,8 @@ const NetworkGraph = () => {
                 <Navbar onExportClick={handleExportClick} onDownloadCSV={downloadCSV} />
                 <Stack m={'0 auto'} spacing={0.5} direction='row'>
                     <>
-                        <input
-                            type="file"
-                            accept=".csv"
-                            onChange={handleFileUpload}
-                            style={{ display: 'none' }}
-                            id="csv-upload"
-                        />
                         <label htmlFor="csv-upload">
-                            <Button variant="contained" component="span">
+                            <Button variant="contained" component="span"   onClick={() => setDialogOpen2(true)}>
                                 Upload CSV
                             </Button>
                         </label>
@@ -1273,6 +1281,26 @@ const NetworkGraph = () => {
                     </Select>
                 </FormControl>
             </div>
+
+            {/* upload csv dialog */}
+              <Dialog open={dialogOpen2} onClose={() => setDialogOpen2(false)}>
+                <DialogTitle>Confirm Action</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Do you confirm clearing all your Educational Resources' data for this session?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDialogOpen2(false)} color="primary">
+                        Dismiss
+                    </Button>
+                    <Button onClick={handleAgree} color="primary" autoFocus>
+                        Agree
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* clear dialog */}
             {dialogOpen && <Dialog
                 open={dialogOpen}
                 TransitionComponent={Transition}
