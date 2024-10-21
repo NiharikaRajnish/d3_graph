@@ -46,17 +46,23 @@ if(selectedNode != ""){
                 vertical: 'top',
                 horizontal: 'center',
             }}
-            PaperProps={{
-                style: {
+            sx={{
                     width: 'auto',
                     height: 'auto',
                     padding: '10px',
+                    marginTop:'10px',
                     display: 'flex',
                     flexDirection: 'row',
+                    flexWrap: 'wrap',
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '4px',
-                },
+                    gap: 1,
+                    '@media (max-width: 600px)': {
+          flexDirection: 'column',  // Switch to column layout on small screens
+          alignItems: 'flex-start',
+        },
+                
             }}
         >
             <Button
@@ -65,7 +71,17 @@ if(selectedNode != ""){
                 variant="outlined"
                 margin="dense"
                 size="small"
-                style={{ marginRight: '4px' }}
+                sx={{
+                    margin:2,
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    height:'30px',
+  
+                    maxWidth: '100%',  // Ensure it doesn’t overflow container
+                    '@media (max-width: 600px)': {
+                      width: '100%',  // Full-width on smaller screens
+                    },
+                  }}
             >
                 Add Link
             </Button>
@@ -111,6 +127,17 @@ if(selectedNode != ""){
                 color="primary"
                 size="small"
                 style={{ marginLeft: '4px', width: '20px' }}
+                sx={{
+                    margin:2,
+                    minWidth: 90,
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    maxWidth: '100%',  // Ensure it doesn’t overflow container
+                    '@media (max-width: 600px)': {
+                      width: '100%',  // Full-width on smaller screens
+                    },
+                  }}
             >
                 Rename
             </Button>
@@ -121,6 +148,17 @@ if(selectedNode != ""){
                 color="primary"
                 size="small"
                 style={{ marginLeft: '4px', width: '20px' }}
+                sx={{
+                    margin:2,
+                    minWidth: 90,
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    maxWidth: '100%',  // Ensure it doesn’t overflow container
+                    '@media (max-width: 600px)': {
+                      width: '100%',  // Full-width on smaller screens
+                    },
+                  }}
             >
                 Remove
             </Button>
@@ -191,7 +229,17 @@ else if(selectedNodes.length >1){
                 variant="outlined"
                 color="primary"
                 size="small"
-                style={{ marginLeft: '4px', width: '20px', marginTop: '10px' }}
+                sx={{
+                    minWidth: 90,
+                    p: 1,  // Adds padding inside the button
+                    m: 0.5,  // Adds margin around the button
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    '@media (max-width: 600px)': {
+                      width: '100%',  // Full-width on smaller screens
+                    },
+                  }}
             >
                 Remove
             </Button>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, FormControlLabel, FormGroup, Slide, Stack, Switch, Typography } from '@mui/material';
 import { MenuItem, Select, FormControl, InputLabel } from '@mui/material';
-import { Add, ErrorOutline, Visibility } from '@mui/icons-material';
+import { Add, ErrorOutline, Visibility ,Undo as UndoIcon} from '@mui/icons-material';
 import NodePopover from './NodePopover';
 import LinkPopover from './LinkPopover';
 import Navbar from './Navbar';
@@ -38,6 +38,7 @@ const NetworkGraph = () => {
     const [linkingMessage, setLinkingMessage] = useState('');
     const [filterType, setFilterType] = useState('3');
     const [isAlertError, setIsAlertError] = useState(false);
+    const [history, setHistory] = useState([]); // Stores previous states for undo
     const currNodesNumRef = useRef(0);
     const currShownNodesNumRef = useRef(0);
     const prevNodesNumRef = useRef(0);
@@ -176,6 +177,10 @@ const NetworkGraph = () => {
             setShiftPressed(false);
 
         }
+    };
+
+    const saveToHistory = (action, payload) => {
+        setHistory(prev => [...prev, { action, payload }]);
     };
 
     useEffect(() => {
@@ -744,6 +749,7 @@ const NetworkGraph = () => {
         const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, assesses: null, isPartOf: null, comesAfter: null };
         setNodes([...nodes, newNode]);
         updateSavedNodes();
+        saveToHistory('addNode', newNode); 
 
     };
 
@@ -756,6 +762,37 @@ const NetworkGraph = () => {
         setDialogOpen(false)
     };
 
+    const handleUndo = () => {
+        if (history.length === 0) return;
+    
+        const lastAction = history[history.length - 1];
+        switch (lastAction.action) {
+            case 'addNode':
+                setNodes(nodes.filter(n => n.id !== lastAction.payload.id));
+                setLinks(links.filter(l => l.source.id !== lastAction.payload.id && l.target.id !== lastAction.payload.id));
+                console.log("1");
+                break;
+            case 'addLink':
+            // Undo add link by removing the last link from the stack
+            setLinks(links.slice(0, -1)); // Remove the last link
+            break;
+               
+                break;
+            case 'removeNode':
+                setNodes([...nodes, lastAction.payload.node]);
+                setLinks([...links, ...lastAction.payload.links]);
+                console.log("3");
+                break;
+            case 'removeLink':
+                setLinks([...links, lastAction.payload]);
+                console.log("4");
+                break;
+            default:
+                break;
+        }
+    
+        setHistory(prev => prev.slice(0, -1));
+    };
     const handleRemoveNode = () => {
         if (selectedNode) {
             const nodeId = selectedNode.id;
@@ -772,6 +809,13 @@ const NetworkGraph = () => {
             setTimeout(() => setLinkingMessage(''), 2000); // Clear the message after 2 seconds
         }
         updateSavedNodes();
+
+    // Capture all links connected to the node being removed
+    const removedLinks = links.filter(
+        l => l.source.id === nodeId || l.target.id === nodeId
+    );
+
+        saveToHistory('removeNode', { node: selectedNode, links: removedLinks }); 
     };
 
     function nodeClicked(event, d) {
@@ -949,6 +993,10 @@ const NetworkGraph = () => {
         setLinkingNode(selectedNode);
         setAnchorElNode(false);
         setLinkingMessage('Click another node to establish a link');
+
+    // Define the new link object
+    const newLink = { source: linkingNode, target: selectedNode };
+    saveToHistory('addLink', { link: newLink });
     };
 
     const handleRemoveLink = () => {
@@ -961,14 +1009,17 @@ const NetworkGraph = () => {
                 case "Is Part Of":
                     selectedLink.source.isPartOf = null;
             }
+            saveToHistory('removeLink', selectedLink); // Save the removed link
             // ?setLinks(links.filter(l => l !== selectedLink));
             setSelectedLink(null);
             setNodes([...nodes]);
             updateSavedNodes();
+            
         } else {
             setLinkingMessage('Select a link to delete');
             setTimeout(() => setLinkingMessage(''), 2000); // Clear the message after 2 seconds
         }
+       
     };
 
     // Function to save nodes to Local Storage
@@ -1192,6 +1243,8 @@ const NetworkGraph = () => {
                     <Button onClick={() => setDialogOpen(true)} color={'error'} startIcon={<CgTrashEmpty />} variant="contained">Clear</Button>
                     <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
                     <Button id='recenterButton' variant="outlined">Recenter</Button>
+                    <Button onClick={handleUndo} startIcon={<UndoIcon />} variant="outlined" disabled={history.length === 0} >Undo</Button>
+                    
                     <FormControlLabel sx={{ marginLeft: '2px' }}
                         control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
                         label={`${labelsToggled ? 'Hide' : 'Show'} Labels`}
