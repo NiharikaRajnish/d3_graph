@@ -1,8 +1,8 @@
 import React from 'react';
 import { Popover, MenuItem, Select, FormControl, InputLabel, Button } from '@mui/material';
-import { Remove } from '@mui/icons-material';
+import { Remove,SwapHoriz  } from '@mui/icons-material';
 
-const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemoveLink, selectedLink, sourceNodeType }) => {
+const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemoveLink, handleReverseLink, selectedLink, sourceNodeType }) => {
     const handleChange = (event) => {
         const newType = event.target.value;
         handleTypeChange(newType);
@@ -17,6 +17,11 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
     // };
 
     //rules for linking
+
+    const handleReverse = () => {
+        handleReverseLink(selectedLink.source, selectedLink.target);
+    };
+
 
     const renderMenuItems = () => {
         if (selectedLink.source.shape === 'diamond' || selectedLink.target.shape === 'diamond') {
@@ -105,6 +110,14 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
 
             >
                 Remove Link
+            </Button>
+            <Button
+                onClick={handleReverse}
+                startIcon={<SwapHoriz />}
+                variant="outlined"
+                style={{ margin: '8px', width: '100px' }}
+            >
+                Reverse Link
             </Button>
         </Popover>
     );

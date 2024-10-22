@@ -9,6 +9,7 @@ import Navbar from './Navbar';
 import { useSlider } from './SliderContext';
 import exportSvg from './ExportSvg'; // Import the function
 import { CgTrashEmpty } from 'react-icons/cg';
+import { SiPurescript } from 'react-icons/si';
 
 
 
@@ -154,6 +155,8 @@ const NetworkGraph = () => {
 
         setNodes(updatedNodes);
     }, [atomicSliderValue]); // Dependency on aERSliderValue
+
+
 
     const handleKeyDown = (event) => {
 
@@ -1037,6 +1040,46 @@ const NetworkGraph = () => {
        
     };
 
+    const handleReverseLink = (source, target) => {
+        if (selectedLink) {
+            //remove link
+            switch (selectedLink.type) {
+                    case "Assesses":
+                        selectedLink.source.assesses = null;
+                    case "Comes After":
+                        selectedLink.source.comesAfter = null;
+                    case "Is Part Of":
+                        selectedLink.source.isPartOf = null;
+                }
+                        
+                // Create a new array without the selected link
+                       
+                const updatedLinks = links.filter(link => link.id !== selectedLink.id);
+
+                        
+                // Create a new link object with swapped source and target
+                        
+                const newLink = {
+                            
+                    ...selectedLink,
+                           
+                    source: target,
+                            
+                    target: source,
+                        
+                };
+            
+
+            // Add the new link to the updated array
+            updatedLinks.push(newLink);
+
+            // Update the state with the new links array
+            setLinks(updatedLinks);
+           setAnchorElLink(false);
+        }
+        };
+
+
     // Function to save nodes to Local Storage
     const saveNodesToLocalStorage = (nodes, fType) => {
         // an if statement for whether an fType is passed in or not
@@ -1384,6 +1427,7 @@ const NetworkGraph = () => {
                     onClose={handleCloseLink}
                     handleTypeChange={handleTypeChange}
                     handleRemoveLink={handleRemoveLink}
+                    handleReverseLink={handleReverseLink}
                     selectedLink={selectedLink}
                     sourceNodeType={selectedLink.source ? selectedLink.source.type : null}
 
