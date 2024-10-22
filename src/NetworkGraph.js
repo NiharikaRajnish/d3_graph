@@ -641,6 +641,16 @@ const NetworkGraph = () => {
 
     const handleShapeChange = (newShape) => {
         if (selectedNode) {
+
+      // Save the current shape and color of the selected node to history
+      saveToHistory('changeShape', {
+        nodeId: selectedNode.id,
+        originalShape: selectedNode.shape, // Save the original shape
+        originalColor: selectedNode.color  // Save the original color
+    });
+
+
+
             selectedNode.shape = newShape;
             switch (newShape) {
                 case 'Atomic ER':
@@ -661,7 +671,15 @@ const NetworkGraph = () => {
             setNodes([...nodes]); // Trigger re-render to update node shape and color
             // setLinks([...links]);
         }
-        if (selectedNodes) {
+        if (selectedNodes && selectedNodes.length > 0){
+        // Save the original shapes and colors of selected nodes for undo
+        const originalShapes = selectedNodes.map(node => ({
+            id: node.id,
+            shape: node.shape,
+            color: node.color,
+        }));
+
+        saveToHistory('changeMultipleShapes', { originalShapes });
             for (var i of selectedNodes) {
                 if (i != 0) {
                     i.shape = newShape;
@@ -690,16 +708,30 @@ const NetworkGraph = () => {
             setNodes([...nodes]); // Trigger re-render to update node shape and color
         }
         updateSavedNodes();
+        setSelectedNodes([]); // This clears the selected nodes
 
     };
 
     const handleSizeChange = (newSize) => {
         if (selectedNode) {
+          // Save the current size of the node for undo purposes
+          saveToHistory('changeSize', {
+            nodeId: selectedNode.id,
+            originalSize: selectedNode.size // Save the original size before changing
+        });
+
             selectedNode.size = newSize;
             setNodes([...nodes]); // Trigger re-render to update node size
             setAnchorElNode(selectedNode)
         }
         else if (selectedNodes && selectedNodes.length > 0) {
+        // Save the original sizes of the selected nodes for undo
+        const originalSizes = selectedNodes.map(node => ({
+            id: node.id,
+            size: node.size // Save each node's original size before changing
+        }));
+        saveToHistory('changeMultipleSizes', { originalSizes });
+
             for (var i of selectedNodes) {
                 if (i != 0) {
                     i.size = newSize
@@ -711,7 +743,13 @@ const NetworkGraph = () => {
         updateSavedNodes();
     };
     const handleTypeChange = (newType) => {
+
         if (selectedLink) {
+                   // Save the current link type to the history for undo purposes
+        saveToHistory('changeLinkType', {
+            linkId: selectedLink.id,
+            originalType: selectedLink.type, // Save the original type
+        });
             switch (selectedLink.type) {
                 case 'Assesses':
                     nodes.find(n => n.id === selectedLink.source.id).assesses = null;
@@ -773,11 +811,12 @@ const NetworkGraph = () => {
         const lastAction = history[history.length - 1];
         switch (lastAction.action) {
             case 'addNode':
+                console.log("1")
                 setNodes(nodes.filter(n => n.id !== lastAction.payload.id));
                 setLinks(links.filter(l => l.source.id !== lastAction.payload.id && l.target.id !== lastAction.payload.id));
-                console.log("1");
                 break;
             case 'addLink':
+                console.log("2")
             // Undo add link by removing the last link from the stack
             setLinks(links.slice(0, -1)); // Remove the last link
             break;
@@ -792,6 +831,109 @@ const NetworkGraph = () => {
                 setLinks([...links, lastAction.payload]);
                 console.log("4");
                 break;
+
+            case 'reverseLink':
+                    // Undo the reversal by swapping the link back to its original state
+                    const { originalLink, newLink } = lastAction.payload;
+        
+                    // Replace the reversed link (newLink) with the original link (originalLink)
+                    const updatedLinks = links.map(link => 
+                        link.id === newLink.id ? originalLink : link
+                    );
+        
+                    setLinks(updatedLinks); // Update links with the original link restored
+                    console.log("5");
+                break;
+                case 'changeShape':
+                    // Undo the shape change for a single node
+                    const nodeToRevert = nodes.find(n => n.id === lastAction.payload.nodeId);
+                    if (nodeToRevert) {
+                        // Restore the original shape and color
+                        nodeToRevert.shape = lastAction.payload.originalShape;
+                        nodeToRevert.color = lastAction.payload.originalColor;
+                        setNodes([...nodes]); // Update nodes to trigger re-render
+                    }
+                    console.log("6");
+                    break;
+
+                case 'changeMultipleShapes':
+                        // Undo the shape change for multiple nodes
+                        for (const originalNode of lastAction.payload.originalShapes) {
+                            const node = nodes.find(n => n.id === originalNode.id);
+                            if (node) {
+                                // Restore each node's original shape and color
+                                node.shape = originalNode.shape;
+                                node.color = originalNode.color;
+                            }
+                        }
+                        setNodes([...nodes]); // Update nodes to trigger re-render
+                        setSelectedNodes([]);
+                        console.log("7");
+                     break;
+
+                case 'changeSize':
+                        // Undo the size change for a single node
+                        const nodeToRevert2 = nodes.find(n => n.id === lastAction.payload.nodeId);
+                        if (nodeToRevert2) {
+                            // Restore the original size
+                            nodeToRevert2.size = lastAction.payload.originalSize;
+                            setNodes([...nodes]); // Trigger re-render to update node size
+                        }
+                    break;
+            
+                case 'changeMultipleSizes':
+                        // Undo the size change for multiple nodes
+                        for (const originalNode of lastAction.payload.originalSizes) {
+                            const node = nodes.find(n => n.id === originalNode.id);
+                            if (node) {
+                                // Restore the original size for each node
+                                node.size = originalNode.size;
+                            }
+                        }
+                        setNodes([...nodes]); // Trigger re-render to update node sizes
+                    break;
+
+                case 'changeLinkType':
+                        // Undo the link type change by reverting to the original type
+                        const linkToRevert = links.find(l => l.id === lastAction.payload.linkId);
+                        if (linkToRevert) {
+                            // Remove the new type association
+                            switch (linkToRevert.type) {
+                                case 'Assesses':
+                                    nodes.find(n => n.id === linkToRevert.source.id).assesses = null;
+                                    break;
+                                case 'Comes After':
+                                    nodes.find(n => n.id === linkToRevert.source.id).comesAfter = null;
+                                    break;
+                                case 'Is Part Of':
+                                    nodes.find(n => n.id === linkToRevert.source.id).isPartOf = null;
+                                    break;
+                            }
+            
+                            // Restore the original type association
+                            switch (lastAction.payload.originalType) {
+                                case 'Assesses':
+                                    nodes.find(n => n.id === linkToRevert.source.id).assesses = linkToRevert.target.id;
+                                    break;
+                                case 'Comes After':
+                                    nodes.find(n => n.id === linkToRevert.source.id).comesAfter = linkToRevert.target.id;
+                                    break;
+                                case 'Is Part Of':
+                                    nodes.find(n => n.id === linkToRevert.source.id).isPartOf = linkToRevert.target.id;
+                                    break;
+                            }
+            
+                            // Restore the original type to the link
+                            linkToRevert.type = lastAction.payload.originalType;
+            
+                            // Update the nodes state to trigger a re-render
+                            setNodes([...nodes]);
+                            updateSavedNodes(); // Optionally update the saved state
+                        }
+                    break;
+            
+                
+        
             default:
                 break;
         }
@@ -1068,6 +1210,13 @@ const NetworkGraph = () => {
                     target: source,
                         
                 };
+
+                 // Save the original link before reversal to the history
+        saveToHistory('reverseLink', {
+            originalLink: selectedLink, // Original link before reversal
+            newLink: newLink            // Reversed link
+        });
+
             
 
             // Add the new link to the updated array
