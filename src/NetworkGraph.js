@@ -835,14 +835,19 @@ const NetworkGraph = () => {
             case 'reverseLink':
                     // Undo the reversal by swapping the link back to its original state
                     const { originalLink, newLink } = lastAction.payload;
-        
+                    console.log("originalLink",  originalLink);
+                  
+
                     // Replace the reversed link (newLink) with the original link (originalLink)
                     const updatedLinks = links.map(link => 
-                        link.id === newLink.id ? originalLink : link
+                        link.source.id === newLink.source.id  && link.target.id === newLink.target.id ? originalLink : link
                     );
+
+                      console.log("Updated Links:", updatedLinks);
+                      console.log("newLink:",newLink);
         
                     setLinks(updatedLinks); // Update links with the original link restored
-                    console.log("5");
+
                 break;
                 case 'changeShape':
                     // Undo the shape change for a single node
@@ -1196,8 +1201,11 @@ const NetworkGraph = () => {
                 }
                         
                 // Create a new array without the selected link
+
                        
-                const updatedLinks = links.filter(link => link.id !== selectedLink.id);
+                const updatedLinks = links.filter(link => link.source.id !== selectedLink.source.id);
+               
+
 
                         
                 // Create a new link object with swapped source and target
