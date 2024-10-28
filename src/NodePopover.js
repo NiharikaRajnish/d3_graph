@@ -10,10 +10,17 @@ const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode,
         setNewName(event.target.value);
     };
 
-    const handleRenameClick = () => {
-        handleRenameNode(newName); // Update selectedNode's name
-        onClose();
-    };
+
+  // Handle Enter key to rename the node
+  const handleRenameOnEnter = (event) => {
+    if (event.key === 'Enter') {
+      handleRenameNode(newName);  // Rename the node
+      onClose();  // Close the popover
+    }
+  };
+
+
+
 
     const handleRemoveClick = () => {
         handleRemoveNode(newName); // remove selectedNode
@@ -46,17 +53,23 @@ if(selectedNode != ""){
                 vertical: 'top',
                 horizontal: 'center',
             }}
-            PaperProps={{
-                style: {
+            sx={{
                     width: 'auto',
                     height: 'auto',
                     padding: '10px',
+                    marginTop:'10px',
                     display: 'flex',
                     flexDirection: 'row',
+                    flexWrap: 'wrap',
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '4px',
-                },
+                    gap: 1,
+                    '@media (max-width: 600px)': {
+          flexDirection: 'column',  // Switch to column layout on small screens
+          alignItems: 'flex-start',
+        },
+                
             }}
         >
             <Button
@@ -65,7 +78,17 @@ if(selectedNode != ""){
                 variant="outlined"
                 margin="dense"
                 size="small"
-                style={{ marginRight: '4px' }}
+                sx={{
+                    margin:2,
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    height:'30px',
+  
+                    maxWidth: '100%',  // Ensure it doesn’t overflow container
+                    '@media (max-width: 600px)': {
+                      width: '100%',  // Full-width on smaller screens
+                    },
+                  }}
             >
                 Add Link
             </Button>
@@ -101,19 +124,11 @@ if(selectedNode != ""){
     label="Rename ER"
     value={newName}
     onChange={handleChangeName}
+    onKeyDown={handleRenameOnEnter}
     margin="dense"
     size="small"
     style={{ marginLeft: '4px', width: '150px' }}
 />
-            <Button
-                onClick={handleRenameClick}
-                variant="outlined"
-                color="primary"
-                size="small"
-                style={{ marginLeft: '4px', width: '20px' }}
-            >
-                Rename
-            </Button>
             <Button
                 // startIcon={<Remove/>}
                 onClick={handleRemoveClick}
@@ -121,6 +136,17 @@ if(selectedNode != ""){
                 color="primary"
                 size="small"
                 style={{ marginLeft: '4px', width: '20px' }}
+                sx={{
+                    margin:2,
+                    minWidth: 90,
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    maxWidth: '100%',  // Ensure it doesn’t overflow container
+                    '@media (max-width: 600px)': {
+                      width: '100%',  // Full-width on smaller screens
+                    },
+                  }}
             >
                 Remove
             </Button>
@@ -191,7 +217,17 @@ else if(selectedNodes.length >1){
                 variant="outlined"
                 color="primary"
                 size="small"
-                style={{ marginLeft: '4px', width: '20px', marginTop: '10px' }}
+                sx={{
+                    minWidth: 90,
+                    p: 1,  // Adds padding inside the button
+                    m: 0.5,  // Adds margin around the button
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    '@media (max-width: 600px)': {
+                      width: '100%',  // Full-width on smaller screens
+                    },
+                  }}
             >
                 Remove
             </Button>
