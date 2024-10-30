@@ -851,7 +851,7 @@ const NetworkGraph = () => {
                 break;
                 case 'changeShape':
                     // Undo the shape change for a single node
-                    const nodeToRevert = nodes.find(n => n.id === lastAction.payload.nodeId);
+                    const nodeToRevert = nodes.find(n => n.id === lastAction.payload?.nodeId);
                     if (nodeToRevert) {
                         // Restore the original shape and color
                         nodeToRevert.shape = lastAction.payload.originalShape;
@@ -878,7 +878,7 @@ const NetworkGraph = () => {
 
                 case 'changeSize':
                         // Undo the size change for a single node
-                        const nodeToRevert2 = nodes.find(n => n.id === lastAction.payload.nodeId);
+                        const nodeToRevert2 = nodes.find(n => n.id === lastAction.payload?.nodeId);
                         if (nodeToRevert2) {
                             // Restore the original size
                             nodeToRevert2.size = lastAction.payload.originalSize;
@@ -946,8 +946,9 @@ const NetworkGraph = () => {
         setHistory(prev => prev.slice(0, -1));
     };
     const handleRemoveNode = () => {
+        let nodeId = null;
         if (selectedNode) {
-            const nodeId = selectedNode.id;
+            nodeId = selectedNode.id;
             setNodes(nodes.filter(n => n.id !== nodeId));
             setSelectedNode(null);
         }
