@@ -11,13 +11,14 @@ import exportSvg from './ExportSvg'; // Import the function
 import { CgTrashEmpty } from 'react-icons/cg';
 
 
-
 const NetworkGraph = () => {
-    let width = window.innerWidth * 0.9,
-        height = window.innerHeight * 0.8;
+    // let width = window.innerWidth * 0.9,
+    //     height = window.innerHeight * 0.8;
+    const initW = localStorage.getItem('width') ? JSON.parse(localStorage.getItem('width')) : window.innerWidth * 0.9,
+        initH = localStorage.getItem('height') ? JSON.parse(localStorage.getItem('height')) : window.innerHeight * 0.9;
     const initialNodes = [
-        { id: 0, name: 'start', type: 'start', shape: 'diamond', size: 10, color: 'green', fx: 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null }, // Fixed position for start node
-        { id: 54321, name: 'end', type: 'end', shape: 'diamond', size: 10, color: 'green', fx: width - 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
+        { id: 0, name: 'start', type: 'start', shape: 'diamond', size: 10, color: 'green', fx: 50, fy: initH / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null }, // Fixed position for start node
+        { id: 54321, name: 'end', type: 'end', shape: 'diamond', size: 10, color: 'green', fx: initW - 50, fy: initH / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
     ];
     const initialLinks = [];
 
@@ -27,7 +28,8 @@ const NetworkGraph = () => {
     const [shiftPressed, setShiftPressed] = useState(false);
     const [selectedNodes, setSelectedNodes] = useState([0]);
     const [selectedLink, setSelectedLink] = useState(null);
-    const [nodeSet, setNodeSet] = useState({ '1': null, '2': null, '3': null, '4': null });
+    const [width, setWidth] = useState(initW);
+    const [height, setHeight] = useState(initH);
     const [anchorElNode, setAnchorElNode] = useState(null);
     const [anchorElMultiNode, setAnchorElMultiNode] = useState(null);
     const [anchorElLink, setAnchorElLink] = useState(null);
@@ -43,6 +45,7 @@ const NetworkGraph = () => {
     const prevNodesNumRef = useRef(0);
     const prevShownNodesNumRef = useRef(0);
     const svgRef = useRef(null);
+    const simRef = useRef(null);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
     const linkingNodeRef = useRef(linkingNode);
     const { sliderValue, setSliderValue, aERSliderValue, setaERSliderValue, iERSliderValue, setIERSliderValue, rERSliderValue, setrERSliderValue, atomicSliderValue, setatomicSliderValue } = useSlider();
@@ -51,15 +54,25 @@ const NetworkGraph = () => {
 
     const radius = 15;
     // useEffect(() => {
-    //     const unloadCallback = (event) => {
-    //         event.preventDefault();
-    //         event.returnValue = "";
-    //         return "";
+    //     const handleResize = (event) => {
+    //         let widthOld = width
+    //         width = window.innerWidth * 0.9
+    //         let heightOld = height
+    //         height = window.innerHeight * 0.9
+    //         const oldNewWRatio = width / widthOld
+    //         const oldNewHRatio = height / heightOld
+    //         nodes.forEach((n) => {
+    //             if (n.shape !== 'diamond') {
+    //                 n.fx = oldNewWRatio * n.fx
+    //                 n.fy = oldNewHRatio * n.fy
+    //             }
+    //         })
+    //         setNodes([...nodes])
     //     };
-    //     window.addEventListener("beforeunload", unloadCallback);
+    //     window.addEventListener("resize", handleResize);
     //     // localStorage.clear();
     //     // localStorage.getItem('nodes3') && setNodes(loadNodesFromLocalStorage('3'));
-    //     return () => window.removeEventListener("beforeunload", unloadCallback);
+    //     return () => window.removeEventListener("resize", handleResize);
     // }, []);
 
     useEffect(() => {
@@ -198,8 +211,8 @@ const NetworkGraph = () => {
             loAlpha = 0.16;
         }
         const svg = d3.select(svgRef.current);
-        height = svg.node().getBoundingClientRect().height * 0.9;
-        width = svg.node().getBoundingClientRect().width * 0.9;
+        // height = svg.node().getBoundingClientRect().height * 0.9;
+        // width = svg.node().getBoundingClientRect().width * 0.9;
 
         const ticked = () => {
 
@@ -316,13 +329,16 @@ const NetworkGraph = () => {
             .on('tick', ticked)
             .on('end',
                 () => {
+                    let i = 0
                     nodes.forEach(d => {
                         if (!d.fixed) {
+                            i++;
                             d.fy = Math.max(radius + 100, Math.min(height - 100 - radius, d.y));
                             d.fx = Math.max(radius, Math.min(width - 100 - radius, d.x));
                             d.fixed = true;
                         }
                     })
+                    i > 0 && setNodes([...nodes])
                     saveNodesToLocalStorage(nodes, filterType);
                 });
 
@@ -369,7 +385,7 @@ const NetworkGraph = () => {
 
         const legendRect = svg.select('#legend').select('rect')
             .attr('x', width - 330)
-            .attr('y', height - 130)
+            .attr('y', height - 230)
             .attr('width', 200)
             .attr('height', 100)
             .style('fill', 'white')
@@ -396,14 +412,14 @@ const NetworkGraph = () => {
                 }
             })
             .attr('points', (d, i) => {
-                return `${width - 325},${height - 105 + (i * 20)} ${width - 255},${height - 105 + (i * 20)} ${width - 185},${height - 105 + (i * 20)}`
+                return `${width - 325},${height - 205 + (i * 20)} ${width - 255},${height - 205 + (i * 20)} ${width - 185},${height - 205 + (i * 20)}`
             })
             .attr("marker-mid", function (d) { return "url(#" + (d.source.id + "-" + d.target.id).replace(/\s+/g, '') + ")"; });
 
         const legendTextEnter = legendText.enter().append('text')
             .attr("x", width - 182)
             .attr("y", (d, i) => {
-                return `${height - 103 + (i * 20)}`
+                return `${height - 203 + (i * 20)}`
             })
             .text((d) => d.type)
             .style('font-size', 9);
@@ -517,6 +533,7 @@ const NetworkGraph = () => {
             .attr('transform', d => `translate(${d.fx},${d.fy})`)
 
         simulation.alpha(loAlpha).restart(); // Use a lower alpha value to minimize layout disruptions
+        simRef.current = simulation;
         prevNodesNumRef.current = currNodesNumRef.current;
         prevShownNodesNumRef.current = currShownNodesNumRef.current;
         if (shiftRef.current == false && selectedNodes.length < 2) {
@@ -747,11 +764,35 @@ const NetworkGraph = () => {
 
     };
 
+    const handleAutoLayout = () => {
+        setNodes([...nodes.map((x) => {
+            if (x.id !== 54321 && x.id !== 0) {
+                return {
+                    ...x,
+                    fixed: false,
+                    fx: null,
+                    fy: x.fy === height / 2 ? x.fy : null
+                }
+            } else return x
+        })])
+        // simRef.current.tick(250)
+    };
+
     const handleClear = (yn) => {
         if (yn) {
             localStorage.clear();
-            setNodes([...nodes.filter((n) => (n.id === 54321) || (n.id === 0))]);
-            updateSavedNodes();
+            let strtEndNodes = nodes.filter(n => (n.id === 54321) || (n.id === 0)),
+                currH = window.innerHeight * 0.9,
+                currW = window.innerWidth * 0.9;
+            strtEndNodes.forEach(n => {
+                n.fy = currH / 2
+                if (n.id === 54321) {
+                    n.fx = currW - 50
+                } else n.fx = 50
+            });
+            setWidth(currW)
+            setHeight(currH)
+            setNodes([...strtEndNodes]);
         }
         setDialogOpen(false)
     };
@@ -839,10 +880,18 @@ const NetworkGraph = () => {
             reader.readAsText(file);
         }
         event.target.value = ''; // Clear the file input after processing
+        prevShownNodesNumRef.current = 0;
     };
 
     const parseCSV = (data) => {
+        let savedW = width
+        let savedH = height
         let parsedData = d3.csvParse(data, ({ identifier, title, description, url, type, isPartOf, isFormatOf, assesses, comesAfter, fx, fy }) => {
+            if (!identifier && !title && fx && fy) {
+                savedW = fx
+                savedH = fy
+                return { name: 'start' }
+            }
             const node = {
                 id: +identifier,
                 name: title,
@@ -896,7 +945,7 @@ const NetworkGraph = () => {
             avgFXs.push((iER1.fx + iER2.fx) / 2);
         }
         for (let i = 0; i < aERNodes.length; i++) {
-            aERNodes[i].fx = avgFXs[i];
+            aERNodes[i].fx = !aERNodes[i].fx ? avgFXs[i] : aERNodes[i].fx;
         }
 
         let maxIdNode = iERNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, iERNodes[0]);
@@ -905,18 +954,28 @@ const NetworkGraph = () => {
             if (node.id === 54321) {
                 const updEnd = {
                     ...node,
+                    fy: savedH / 2,
+                    fx: savedW - 50,
                     comesAfter: maxIdNode.id
                 }
                 parsedData.push(updEnd);
             }
             else if (node.id === 0) {
+                node.fy = savedH / 2;
                 parsedData.find(n => n.id === minIdNode.id).comesAfter = 0;
                 parsedData.push(node)
             };
             return node
 
         })
-
+        // const savedNewWRatio = width / savedW
+        // const savedNewHRatio = height / savedH
+        if (savedW !== width || savedH !== height) {
+            localStorage.setItem('width', savedW)
+            localStorage.setItem('height', savedH)
+            setWidth(savedW)
+            setHeight(savedH)
+        }
         setNodes(parsedData);
         // setLinks(newLinks);
     };
@@ -1140,6 +1199,7 @@ const NetworkGraph = () => {
             }
             csvContent += `${node.id},"${node.name}","${node.alternativeTitle}","${node.targetURL}",${node.type},${node.isPartOf || ""},${node.assesses || ""},${node.comesAfter || ""},${node.fx},${node.fy}\n`;
         });
+        csvContent += `,,,,,,,,${width},${height}\n`;
 
         let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
         let link = document.createElement("a");
@@ -1184,13 +1244,14 @@ const NetworkGraph = () => {
                     <Button onClick={() => setDialogOpen(true)} color={'error'} startIcon={<CgTrashEmpty />} variant="contained">Clear</Button>
                     <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
                     <Button id='recenterButton' variant="outlined">Recenter</Button>
+                    <Button onClick={handleAutoLayout} color={'success'} variant="contained">Auto Layout</Button>
                     <FormControlLabel sx={{ marginLeft: '2px' }}
                         control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
                         label={`${labelsToggled ? 'Hide' : 'Show'} Labels`}
                     />
                     <FormControlLabel sx={{ marginLeft: '2px' }}
                         control={<Switch size="small" checked={legendToggled} onChange={() => setLegendToggled(!legendToggled)} />}
-                        label={`${legendToggled ? 'Hide' : 'Show'} Legend`}
+                        label={`Legend ${!legendToggled ? '(Hidden)' : '(Showing)'} `}
                     />
                 </Stack>
                 {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
@@ -1230,7 +1291,7 @@ const NetworkGraph = () => {
                     <Button onClick={() => handleClear(true)}>Agree</Button>
                 </DialogActions>
             </Dialog>}
-            <svg ref={svgRef} width='100%' height='100%' viewBox={`0 0 ${width} ${height}`}>
+            <svg ref={svgRef} preserveAspectRatio='xMidYMid meet' viewBox={`0 0 ${width} ${height - 100}`}>
                 <g id='main'>
                 </g>
                 {legendToggled && (<g id='legend'><rect></rect></g>)}

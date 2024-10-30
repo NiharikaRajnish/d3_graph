@@ -51,14 +51,14 @@ const Navbar = ({ onExportClick, onDownloadCSV }) => {
     <>
       <IconContext.Provider value={{ color: '#000' }}>
         <div className='navbar'>
-          <FaIcons.FaBars onClick={showSidebar} style={{ fontSize: '24px' }} />
+          <FaIcons.FaBars onClick={showSidebar} style={{ fontSize: '24px', cursor: 'pointer' }} />
         </div>
         </IconContext.Provider>
         <nav className={sidebar ? 'nav-menu active' : 'nav-menu'}>
           <ul className='nav-menu-items'>
             <li className='navbar-toggle' onClick={showSidebar}>
             <IconContext.Provider value={{ color: '#fff' }}>
-              <AiIcons.AiOutlineClose />
+              <AiIcons.AiOutlineClose style={{ cursor: 'pointer' }} />
               </IconContext.Provider>
             </li>
 
@@ -66,22 +66,8 @@ const Navbar = ({ onExportClick, onDownloadCSV }) => {
             <li className='accordion-section'>
               <Accordion items={data} />
             </li>
-
-
-
-            {/* <li className='nav-menu-item'>
-              <div className='dropdown-toggle' onClick={toggleDropdown}>
-                <span>Show Legend</span>
-              </div>
-              <div className={dropdownOpen ? 'dropdown open' : 'dropdown'}>
-                <img src='./legend.PNG' alt="Legend" className="legend-image" />
-              </div>
-            </li> */}
-
-            
           </ul>
         </nav>
-
     </>
   );
 }
