@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, FormControlLabel, FormGroup, Slide, Stack, Switch, Typography } from '@mui/material';
 import { MenuItem, Select, FormControl, InputLabel } from '@mui/material';
-import { Add, ErrorOutline, Visibility ,Undo as UndoIcon} from '@mui/icons-material';
+import { Add, ErrorOutline, Visibility ,Undo as UndoIcon, Redo as RedoIcon} from '@mui/icons-material';
 import NodePopover from './NodePopover';
 import LinkPopover from './LinkPopover';
 import Navbar from './Navbar';
@@ -942,9 +942,10 @@ const NetworkGraph = () => {
             default:
                 break;
         }
-    
         setHistory(prev => prev.slice(0, -1));
     };
+    
+
     const handleRemoveNode = () => {
         let nodeId = null;
         if (selectedNode) {
@@ -1191,23 +1192,15 @@ const NetworkGraph = () => {
 
     const handleReverseLink = (source, target) => {
         if (selectedLink) {
-            //remove link
-            switch (selectedLink.type) {
-                    case "Assesses":
-                        selectedLink.source.assesses = null;
-                    case "Comes After":
-                        selectedLink.source.comesAfter = null;
-                    case "Is Part Of":
-                        selectedLink.source.isPartOf = null;
-                }
-                        
-                // Create a new array without the selected link
 
-                       
-                const updatedLinks = links.filter(link => link.source.id !== selectedLink.source.id);
-               
-
-
+        // Create a new array without the selected link
+        const updatedLinks = links.filter(
+            link => !(
+                    link.source.id === selectedLink.source.id &&
+                    link.target.id === selectedLink.target.id
+                )
+            );
+            
                         
                 // Create a new link object with swapped source and target
                         
@@ -1234,7 +1227,8 @@ const NetworkGraph = () => {
 
             // Update the state with the new links array
             setLinks(updatedLinks);
-           setAnchorElLink(false);
+            setAnchorElLink(false);
+            setSelectedLink(null);
         }
         };
 
@@ -1454,7 +1448,6 @@ const NetworkGraph = () => {
                     <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
                     <Button id='recenterButton' variant="outlined">Recenter</Button>
                     <Button onClick={handleUndo} startIcon={<UndoIcon />} variant="outlined" disabled={history.length === 0} >Undo</Button>
-                    
                     <FormControlLabel sx={{ marginLeft: '2px' }}
                         control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
                         label={`${labelsToggled ? 'Hide' : 'Show'} Labels`}

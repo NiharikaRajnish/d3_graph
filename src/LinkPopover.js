@@ -91,8 +91,37 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
                 vertical: 'top',
                 horizontal: 'center',
             }}
+            sx={{
+                width: 'auto',
+                height: 'auto',
+                padding: '10px',
+                marginTop:'10px',
+                display: 'flex',
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '4px',
+                gap: 1,
+                '@media (max-width: 600px)': {
+      flexDirection: 'column',  // Switch to column layout on small screens
+      alignItems: 'flex-start',
+    },
+            
+        }}
         >
-            <FormControl style={{ margin: '8px', width: '180px' }}>
+            <FormControl
+                style={{ margin: '8px', width: '180px' }}
+                sx={{
+                p: 1,  // Adds padding inside the button
+                m: 0.5,  // Adds margin around the button
+                textOverflow: 'ellipsis',
+                maxWidth: '100%',  // Ensure it doesn’t overflow container
+                '@media (max-width: 600px)': {
+                width: '100%',  // Full-width on smaller screens
+                },
+                }}
+            >
                 <InputLabel>Type</InputLabel>
                 <Select
                     value={selectedLink.type}
@@ -106,7 +135,16 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
                 onClick={handleRemoveLink}
                 startIcon={<Remove />}
                 variant="outlined"
-                style={{ margin: '8px', width: '100px' }}
+                style={{ margin: '8px', width: '110px' }}
+                sx={{
+                    p: 1,  // Adds padding inside the button
+                    m: 0.5,  // Adds margin around the button
+                    textOverflow: 'ellipsis',
+                    maxWidth: '100%',  // Ensure it doesn’t overflow container
+                    '@media (max-width: 600px)': {
+                      width: '100%',  // Full-width on smaller screens
+                    },
+                  }}
 
             >
                 Remove Link
@@ -115,7 +153,16 @@ const LinkPopover = ({ id, open, anchorEl, onClose, handleTypeChange, handleRemo
                 onClick={handleReverse}
                 startIcon={<SwapHoriz />}
                 variant="outlined"
-                style={{ margin: '8px', width: '100px' }}
+                style={{ margin: '8px', width: '110px' }}
+                sx={{
+                    textOverflow: 'ellipsis',
+                    p: 1,  // Adds padding inside the button
+                    m: 1,  // Adds margin around the button
+                    maxWidth: '100%',  // Ensure it doesn’t overflow container
+                    '@media (max-width: 600px)': {
+                      width: '100%',  // Full-width on smaller screens
+                    },
+                  }}
             >
                 Reverse Link
             </Button>
