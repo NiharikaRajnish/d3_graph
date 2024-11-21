@@ -9,13 +9,13 @@ import Navbar from './Navbar';
 import { useSlider } from './SliderContext';
 import exportSvg from './ExportSvg'; // Import the function
 import { CgTrashEmpty } from 'react-icons/cg';
-
+import * as _ from 'lodash';
 
 const NetworkGraph = () => {
     // let width = window.innerWidth * 0.9,
     //     height = window.innerHeight * 0.8;
     const initW = localStorage.getItem('width') ? JSON.parse(localStorage.getItem('width')) : window.innerWidth * 0.9,
-        initH = localStorage.getItem('height') ? JSON.parse(localStorage.getItem('height')) : window.innerHeight * 0.9;
+        initH = localStorage.getItem('height') ? JSON.parse(localStorage.getItem('height')) : window.innerHeight * 0.85;
     const initialNodes = [
         { id: 0, name: 'start', type: 'start', shape: 'diamond', size: 10, color: 'green', fx: 50, fy: initH / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null }, // Fixed position for start node
         { id: 54321, name: 'end', type: 'end', shape: 'diamond', size: 10, color: 'green', fx: initW - 50, fy: initH / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
@@ -45,8 +45,7 @@ const NetworkGraph = () => {
     const prevNodesNumRef = useRef(0);
     const prevShownNodesNumRef = useRef(0);
     const svgRef = useRef(null);
-    const simRef = useRef(null);
-    const color = d3.scaleOrdinal(d3.schemeCategory10);
+    const color = d3.scaleSequential(d3.interpolateOranges);
     const linkingNodeRef = useRef(linkingNode);
     const { sliderValue, setSliderValue, aERSliderValue, setaERSliderValue, iERSliderValue, setIERSliderValue, rERSliderValue, setrERSliderValue, atomicSliderValue, setatomicSliderValue } = useSlider();
     const shiftRef = useRef(shiftPressed);
@@ -86,6 +85,8 @@ const NetworkGraph = () => {
     useEffect(() => {
         currNodesNumRef.current = nodes.length;
         currShownNodesNumRef.current = nodes.filter(n => !n.hidden).length;
+        localStorage.setItem('width', width)
+        localStorage.setItem('height', height)
         const newLinks = processLinks(nodes);
         setLinks(newLinks);
         // updateSavedNodes();
@@ -203,13 +204,14 @@ const NetworkGraph = () => {
     }, [links, selectedLink, selectedNode]);
 
     useEffect(() => {
-        let loAlpha = 0;
-        if ((Math.abs(prevShownNodesNumRef.current - currShownNodesNumRef.current) < 2)) {
-            loAlpha = 0.005;
-        }
-        else {
-            loAlpha = 0.16;
-        }
+        const diffOldNew = difference(loadNodesFromLocalStorage(filterType), nodes)
+        let loAlpha = diffOldNew.length > 0 ? 0.16 : 0.005;
+        // if ((Math.abs(prevShownNodesNumRef.current - currShownNodesNumRef.current) < 2)) {
+        //     loAlpha = 0.005;
+        // }
+        // else {
+        //     loAlpha = 0.16;
+        // }
         const svg = d3.select(svgRef.current);
         // height = svg.node().getBoundingClientRect().height * 0.9;
         // width = svg.node().getBoundingClientRect().width * 0.9;
@@ -225,7 +227,20 @@ const NetworkGraph = () => {
 
             svg.selectAll('.nodeShape')
                 .attr('d', d => getShapePath(d.shape)) // Update node shape path
-                .attr('fill', d => d.color || color(d.type))
+                .attr('fill', d => {
+                    switch (d.shape) {
+                        case 'Atomic ER':
+                            return '#fda660';
+                        case 'aER':
+                            return '#1f77b4';
+                        case 'iER':
+                            return '#2ca02c';
+                        case 'rER':
+                            return '#7f7f7f';
+                        default:
+                            return '#ADD8E6';
+                    }
+                })
                 .attr('transform', d => `scale(${getNodeScale(d.size)})`);
 
             svg.selectAll('.link')
@@ -311,9 +326,9 @@ const NetworkGraph = () => {
                 nodes.forEach(node => {
                     if (node.comesAfter !== null && node.comesAfter !== undefined && nodes.find(n => n.comesAfter === node.id)) {
                         // Apply vertical force to nodes with comesAfter property
-                        node.vy -= strength * (node.y - height / 2) * alpha; // Adjust to pull nodes to vertical center
+                        node.vy -= strength * (node.y - (height / 2)) * alpha; // Adjust to pull nodes to vertical center
                     } else {
-                        node.vy += strength * (node.y - height / 2) * alpha * (filterType === '1' ? 1 : 0.25);
+                        node.vy += strength * (node.y - (height / 2)) * alpha * (filterType === '1' ? 1 : 0.25);
                     }
                 });
             };
@@ -322,7 +337,7 @@ const NetworkGraph = () => {
         // maybe also add ids to links so u kno which ones to keep -- might have to change the way links are stored (temporary view ones and permanent ones)
         const simulation = d3.forceSimulation(nodes.filter(n => !n.hidden))
             .force('link', d3.forceLink(links.filter(l => !l.hidden)).id(d => d.id).distance(75)) // Link force
-            .force('chargeMB', d3.forceManyBody().strength(-1000).distanceMax(100).distanceMin(0.01)) // Charge force to repel nodes
+            .force('chargeMB', d3.forceManyBody().strength(-1000).distanceMax(150).distanceMin(0.01)) // Charge force to repel nodes
             .force('charge', d3.forceCollide().radius(42.5))
             .force('center', d3.forceCenter(width / 2, height / 2)) // Centering force
             .force('y', verticalForce(nodes, 1)) // Custom vertical force
@@ -344,6 +359,8 @@ const NetworkGraph = () => {
 
 
         const defaultMarkers = [{ type: 'Assesses', source: { id: -1 }, target: { id: -1 } }, { type: 'Comes After', source: { id: -2 }, target: { id: -2 } }, { type: 'Is Part Of', source: { id: -3 }, target: { id: -3 } }]
+        const defaultShapes = [{ type: 'Atomic ER' }, { type: 'aER' }, { type: 'iER' }, { type: 'rER' }]
+        const defaultShapesTxt = [{ type: 'Atomic ER' }, { type: 'Activity ER' }, { type: 'Instructional ER' }, { type: 'Rubric ER' }]
         const marker = svg.select("defs")
             .selectAll(".markerDef")
             // Assign a marker per link, instead of one per class.
@@ -384,20 +401,26 @@ const NetworkGraph = () => {
             .attr("d", (d) => d.type === 'Comes After' ? "M0,-5L-10,0L0,5" : "M0,-5L10,0L0,5");
 
         const legendRect = svg.select('#legend').select('rect')
-            .attr('x', width - 330)
-            .attr('y', height - 230)
+            .attr('x', width - 230)
+            .attr('y', height - 320)
             .attr('width', 200)
-            .attr('height', 100)
+            .attr('height', 200)
             .style('fill', 'white')
             .style('opacity', 0.8)
             .style('stroke', 'lightgrey')
         const legendLinks = svg.select('#legend').selectAll('.linkLegend')
             .data(...[defaultMarkers])
-        const legendText = svg.select('#legend').selectAll('text')
+        const legendLinksText = svg.select('#legend').selectAll('.linkLegendText')
             .data(...[defaultMarkers])
+        const legendERs = svg.select('#legend').selectAll('.erLegend')
+            .data(...[defaultShapes])
+        const legendERsText = svg.select('#legend').selectAll('.erLegendText')
+            .data(...[defaultShapesTxt])
 
-        legendText.exit().remove();
+        legendLinksText.exit().remove();
         legendLinks.exit().remove();
+        legendERsText.exit().remove();
+        legendERs.exit().remove();
 
         const legendLinksEnter = legendLinks.enter().append('polyline')
             .attr('class', 'linkLegend')
@@ -412,17 +435,50 @@ const NetworkGraph = () => {
                 }
             })
             .attr('points', (d, i) => {
-                return `${width - 325},${height - 205 + (i * 20)} ${width - 255},${height - 205 + (i * 20)} ${width - 185},${height - 205 + (i * 20)}`
+                return `${width - 200},${height - 295 + (i * 20)} ${width - 155},${height - 295 + (i * 20)} ${width - 110},${height - 295 + (i * 20)}`
             })
             .attr("marker-mid", function (d) { return "url(#" + (d.source.id + "-" + d.target.id).replace(/\s+/g, '') + ")"; });
 
-        const legendTextEnter = legendText.enter().append('text')
-            .attr("x", width - 182)
+        const legendTextEnter = legendLinksText.enter().append('text')
+            .attr('class', 'linkLegendText')
+            .attr("x", width - 105)
             .attr("y", (d, i) => {
-                return `${height - 203 + (i * 20)}`
+                return `${height - 293 + (i * 20)}`
             })
             .text((d) => d.type)
-            .style('font-size', 9);
+            .style('font-size', 10);
+
+        const legendERsEnter = legendERs.enter().append('path')
+            .attr('class', 'erLegend')
+            .attr('d', d => getShapePath(d.type))
+            .attr('fill', d => {
+                switch (d.type) {
+                    case 'Atomic ER':
+                        return '#ff7f0e';
+                    case 'aER':
+                        return '#1f77b4';
+                    case 'iER':
+                        return '#2ca02c';
+                    case 'rER':
+                        return '#7f7f7f';
+                    default:
+                        return '#ADD8E6';
+                }
+            })
+            .attr('transform', (d, i) => {
+                return `translate(${width - 155},${height - 230 + (i * 32)}) scale(${getNodeScale(2)})`
+            })
+
+
+        const legendERsTextEnter = legendERsText.enter().append('text')
+            .attr('class', 'erLegendText')
+            .attr("x", width - 105)
+            .attr("y", (d, i) => {
+                return `${height - 227 + (i * 32)}`
+            })
+            .text((d) => d.type)
+            .style('font-size', 10);
+
         const link = svg.select('#main').selectAll('.link')
             .data(links.filter(l => !l.hidden), d => `${d.source.id}-${d.target.id}`);
 
@@ -496,7 +552,20 @@ const NetworkGraph = () => {
         nodeEnter.append('path')
             .attr('class', 'nodeShape')
             .attr('d', d => getShapePath(d.shape))
-            .attr('fill', d => d.color || color(d.type))
+            .attr('fill', d => {
+                switch (d.shape) {
+                    case 'Atomic ER':
+                        return '#ff7f0e';
+                    case 'aER':
+                        return '#1f77b4';
+                    case 'iER':
+                        return '#2ca02c';
+                    case 'rER':
+                        return '#7f7f7f';
+                    default:
+                        return '#ADD8E6';
+                }
+            })
             // .attr('transform', d => `scale(${getNodeScale(d.size)})`)
             .attr('stroke', 'none') // Initialize stroke to none
             .attr('stroke-width', 0) // Initialize stroke width to 0
@@ -533,7 +602,6 @@ const NetworkGraph = () => {
             .attr('transform', d => `translate(${d.fx},${d.fy})`)
 
         simulation.alpha(loAlpha).restart(); // Use a lower alpha value to minimize layout disruptions
-        simRef.current = simulation;
         prevNodesNumRef.current = currNodesNumRef.current;
         prevShownNodesNumRef.current = currShownNodesNumRef.current;
         if (shiftRef.current == false && selectedNodes.length < 2) {
@@ -765,17 +833,66 @@ const NetworkGraph = () => {
     };
 
     const handleAutoLayout = () => {
-        setNodes([...nodes.map((x) => {
-            if (x.id !== 54321 && x.id !== 0) {
-                return {
-                    ...x,
-                    fixed: false,
-                    fx: null,
-                    fy: x.fy === height / 2 ? x.fy : null
+        let nodesCopy = JSON.parse(JSON.stringify(nodes));
+        nodesCopy = nodesCopy.filter(node => {
+            const title = node.name ? node.name.toLowerCase() : '';
+            return title !== 'start' && title !== 'end';
+        });
+        const iERNodes = nodesCopy.filter(node => node.shape === 'iER');
+        let cnt = 0;
+        let tmpID = -5
+        let lastFx = 0
+        nodesCopy.forEach((node, index) => {
+            node.fixed = false;
+            node.fx = null;
+            node.fy = null;
+            if (node.shape === 'iER') {
+                cnt++;
+                tmpID = node.id;
+                node.fixed = true;
+                node.fy = height / 2;
+                node.fx = (cnt * (width / iERNodes.length)) - (width * 0.2);
+                lastFx = node.fx;
+            }
+            else if (node.shape === 'aER') {
+                node.fy = (node.comesAfter || filterType === '1') ? (height) / 2 : null;
+            }
+        });
+        // filter 'iER' nodes then get the average fx position between each consecutive iER node pairs
+        const aERNodes = nodesCopy.filter(node => node.shape === 'aER');
+        const avgFXs = []
+        const iERsStartEnd = [...iERNodes, nodes.find(n => n.id === 54321)]
+        for (let i = 0; i < iERsStartEnd.length - 1; i++) {
+            const iER1 = iERsStartEnd[i];
+            const iER2 = iERsStartEnd[i + 1];
+            avgFXs.push((iER1.fx + iER2.fx) / 2);
+        }
+        for (let i = 0; i < aERNodes.length; i++) {
+            aERNodes[i].fx = !aERNodes[i].fx ? avgFXs[i] : aERNodes[i].fx;
+        }
+        const maxIdNode = iERNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, iERNodes[0]);
+        const maxIdNodeAER = aERNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, iERNodes[0]);
+        const minIdNode = iERNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, iERNodes[0]);
+        const minIdNodeAER = aERNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, iERNodes[0]);
+        const tmpNodes = nodes.filter(n => (n.id === 54321) || (n.id === 0)).forEach(node => { // add only start and end
+            if (node.id === 54321) {
+                const updEnd = {
+                    ...node,
+                    fy: height / 2,
+                    fx: width - 50,
+                    comesAfter: filterType !== '1' ? maxIdNode.id : maxIdNodeAER.id
                 }
-            } else return x
-        })])
-        // simRef.current.tick(250)
+                nodesCopy.push(updEnd);
+            }
+            else if (node.id === 0) {
+                node.fy = height / 2;
+                nodesCopy.find(n => n.id === (filterType !== '1' ? minIdNode.id : minIdNodeAER.id)).comesAfter = 0;
+                nodesCopy.push(node)
+            };
+            return node
+
+        })
+        setNodes(nodesCopy)
     };
 
     const handleClear = (yn) => {
@@ -790,6 +907,8 @@ const NetworkGraph = () => {
                     n.fx = currW - 50
                 } else n.fx = 50
             });
+            localStorage.setItem('width', currW)
+            localStorage.setItem('height', currH)
             setWidth(currW)
             setHeight(currH)
             setNodes([...strtEndNodes]);
@@ -1212,6 +1331,18 @@ const NetworkGraph = () => {
             link.click();
             document.body.removeChild(link);
         }
+    }
+
+
+    function difference(object, base) { // MIT License https://gist.github.com/Yimiprod/7ee176597fef230d1451
+        function changes(object, base) {
+            return _.transform(object, function (result, value, key) {
+                if (!_.isEqual(value, base[key])) {
+                    result[key] = (_.isObject(value) && _.isObject(base[key])) ? changes(value, base[key]) : value;
+                }
+            });
+        }
+        return changes(object, base);
     }
 
     const Transition = React.forwardRef(function Transition(props, ref) {
