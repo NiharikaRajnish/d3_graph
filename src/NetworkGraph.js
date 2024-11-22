@@ -657,7 +657,7 @@ const NetworkGraph = () => {
             selectedNode.shape = newShape;
             switch (newShape) {
                 case 'Atomic ER':
-                    selectedNode.color = '#ADD8E6';
+                    selectedNode.color = '#BAE0F3';
                     break;
                 case 'aER':
                     selectedNode.color = 'orange';
@@ -688,7 +688,7 @@ const NetworkGraph = () => {
                     i.shape = newShape;
                     switch (newShape) {
                         case 'Atomic ER':
-                            i.color = '#ADD8E6';
+                            i.color = '#BAE0F3';
                             break;
                         case 'aER':
                             i.color = 'orange';
@@ -704,7 +704,7 @@ const NetworkGraph = () => {
                             i.stroke = "black";
                             break;
                         default:
-                            i.color = color('default');
+                            i.color = color('#BAE0F3');
                     }
                 }
             }
@@ -792,7 +792,7 @@ const NetworkGraph = () => {
         const maxIdNode = nodes.filter(n => n.id !== 54321).reduce((maxNode, node) => (node.id > maxNode.id) ? node : maxNode, nodes[0]);
         const id = maxIdNode.id + 1;
         const name = `ER ${id}`;
-        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, assesses: null, isPartOf: null, comesAfter: null };
+        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#BAE0F3', x: width / 2, y: height / 2, assesses: null, isPartOf: null, comesAfter: null };
         setNodes([...nodes, newNode]);
         updateSavedNodes();
         saveToHistory('addNode', newNode); 
@@ -812,7 +812,7 @@ const NetworkGraph = () => {
         if (history.length === 0) return;
         const lastAction = history[history.length - 1];
         setRedoHistory(prev => [...prev, lastAction]); // Add the last action to redo history
-
+    
         switch (lastAction.action) {
             case 'addNode':
             // Update only the node that matches lastAction.payload.id, setting comesAfter and isPartOf to null
@@ -837,11 +837,9 @@ const NetworkGraph = () => {
                         lastLink.target.comesAfter == null
 
                     }
-                    console.log(links)
 
                     // Remove the last link from the `links` array
                     const updatedLinks = links.slice(0,-1);
-                    console.log(updatedLinks)
 
                     // Update the links state
                     setLinks(updatedLinks);
@@ -856,26 +854,21 @@ const NetworkGraph = () => {
             case 'removeNode':
                 setNodes([...nodes, lastAction.payload.node]);
                 // setLinks([...links, ...lastAction.payload.links]);
-                console.log("3");
+    
                 break;
             case 'removeLink':
                 setLinks([...links, lastAction.payload]);
-                console.log("4");
+         
                 break;
 
             case 'reverseLink':
                     // Undo the reversal by swapping the link back to its original state
                     const { originalLink, newLink } = lastAction.payload;
-                    console.log("originalLink",  originalLink);
-                  
 
                     // Replace the reversed link (newLink) with the original link (originalLink)
                     const updatedLinks = links.map(link => 
                         link.source.id === newLink.source.id  && link.target.id === newLink.target.id ? originalLink : link
                     );
-
-                      console.log("Updated Links:", updatedLinks);
-                      console.log("newLink:",newLink);
         
                     setLinks(updatedLinks); // Update links with the original link restored
 
@@ -910,7 +903,7 @@ const NetworkGraph = () => {
                 }
                 break;
             case 'changeMultipleShapes':
-
+                console.log(lastAction.payload)
             if (lastAction.payload.originalShapes) {
                 // Collect the current shapes and colors of the affected nodes for redo
                 const redoPayload = nodes
@@ -932,7 +925,7 @@ const NetworkGraph = () => {
                         }
                         setNodes([...nodes]); // Update nodes to trigger re-render
                         setSelectedNodes([]);
-
+                    
                         // Add the redo action to redoHistory
                         setRedoHistory(prevRedoHistory => [
                             ...prevRedoHistory,
@@ -1049,13 +1042,14 @@ const NetworkGraph = () => {
                     comesAfter: null,
                     isPartOf: null,
                 };
-                console.log(nodeToAdd)
                 setNodes([...nodes, nodeToAdd]);
+                setHistory([...history, lastUndoneAction]);
                 break;
             case 'addLink':
                 
                 setLinks([...links, lastUndoneAction.payload]);
                 setRedoHistory(prev => prev.slice(0, -1));
+                setHistory([...history, lastUndoneAction]);
                 break;
             case 'removeNode':
                 setNodes(nodes.filter(n => n.id !== lastUndoneAction.payload.node.id));
@@ -1063,12 +1057,14 @@ const NetworkGraph = () => {
                     l.source.id !== lastUndoneAction.payload.node.id &&
                     l.target.id !== lastUndoneAction.payload.node.id
                 ));
+                setHistory([...history, lastUndoneAction]);
                 break;
             case 'removeLink':
                 setLinks(links.filter(l => 
                     l.source.id !== lastUndoneAction.payload.source.id ||
                     l.target.id !== lastUndoneAction.payload.target.id
                 ));
+                setHistory([...history, lastUndoneAction]);
                 break;
             case 'reverseLink':
                 const { originalLink, newLink } = lastUndoneAction.payload;
@@ -1077,6 +1073,7 @@ const NetworkGraph = () => {
                     link.target.id === originalLink.target.id ? newLink : link
                 );
                 setLinks(reversedLinks);
+                setHistory([...history, lastUndoneAction]);
                 break;
             case 'changeShape':
                     // Handle changeShape redo
@@ -1094,28 +1091,59 @@ const NetworkGraph = () => {
                 
                         setNodes(updatedNodes); // Trigger re-render with updated nodes
                         setRedoHistory(redoHistory.slice(1));
+                        setHistory([...history, lastUndoneAction]);
                     }
                   
                     break;
-            case 'changeMultipleShapes':
-                console.log(lastUndoneAction.payload)
-                for (const updatedNode of lastUndoneAction.payload.originalShapes) {
-                    const node = nodes.find(n => n.id === updatedNode.id);
-                    if (node) {
-                        node.shape = updatedNode.shape;
-                        node.color = updatedNode.color;
-                    }
-                    setRedoHistory(redoHistory.slice(1));
-                }
-                setNodes([...nodes]);
-                
-                break;
+                    case 'changeMultipleShapes':
+                            console.log(lastUndoneAction.payload);
+                        
+                            if (lastUndoneAction.payload.originalShapes) {
+                                // Create a copy of the nodes array to modify
+                                const updatedNodes = nodes.map(n => ({ ...n })); 
+                        
+                                // Collect the current shapes and colors of the affected nodes for undo
+                                const undoPayload = updatedNodes
+                                    .filter(n => lastUndoneAction.payload.originalShapes.some(o => o.id === n.id))
+                                    .map(n => ({
+                                        id: n.id,
+                                        shape: n.shape,
+                                        color: n.color,
+                                    }));
+
+                                setHistory(prevUndoHistory => [
+                                    ...prevUndoHistory,
+                                    {
+                                        action: 'changeMultipleShapes',
+                                        payload: {
+                                            originalShapes: undoPayload, // Save current shapes and colors for undo
+                                        },
+                                    },
+                                ]);
+                        
+                                // Apply the redo changes to the updatedNodes array
+                                for (const updatedNode of lastUndoneAction.payload.originalShapes) {
+                                    const node = updatedNodes.find(n => n.id === updatedNode.id);
+                                    if (node) {
+                                        node.shape = updatedNode.shape;
+                                        node.color = updatedNode.color;
+                                    }
+                                }
+                        
+                                // Update nodes with the modified array
+                                setNodes(updatedNodes);
+                        
+
+                            }
+                            break;
+                        
             case 'changeSize':
                 const nodeToResize = nodes.find(n => n.id === lastUndoneAction.payload.nodeId);
                 if (nodeToResize) {
                     nodeToResize.size = lastUndoneAction.payload.originalSize;
                     setNodes([...nodes]);
                 }
+                setHistory([...history, lastUndoneAction]);
                 break;
             case 'changeMultipleSizes':
                     // Redo the size change for multiple nodes
@@ -1148,6 +1176,7 @@ const NetworkGraph = () => {
                 
                     // Update the nodes state to apply the redone sizes
                     setNodes(updatedNodes);
+                    setHistory([...history, lastUndoneAction]);
                     break;
             // case 'changeLinkType':
             //     const linkToRedo = links.find(l => l.id === lastUndoneAction.payload.linkId);
@@ -1182,7 +1211,7 @@ const NetworkGraph = () => {
     
         // Move the action from redoHistory back to history
         setRedoHistory(prev => prev.slice(0, -1));
-        setHistory([...history, lastUndoneAction]);
+    
     };
     
 
@@ -1618,7 +1647,6 @@ const NetworkGraph = () => {
         if (shiftRef.current == true) {
             // Apply black stroke to all selected nodes
             const selectedNodeIds = Object.values(selected).map(node => node.id);
-            console.log(selectedNodeIds)
             d3.select(svgRef.current).selectAll('.nodeShape')
                 .attr('stroke', d => (selectedNodeIds.includes(d.id) ? 'black' : 'none'))
                 .attr('stroke-width', '0.5');
@@ -1727,10 +1755,10 @@ const NetworkGraph = () => {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDialogOpen2(false)} color="primary">
+                    <Button onClick={() => setDialogOpen2(false)} color='#BAE0F3'>
                         Dismiss
                     </Button>
-                    <Button onClick={handleAgree} color="primary" autoFocus>
+                    <Button onClick={handleAgree} color='#BAE0F3' autoFocus>
                         Agree
                     </Button>
                 </DialogActions>
