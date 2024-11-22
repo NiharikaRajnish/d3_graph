@@ -794,6 +794,7 @@ const NetworkGraph = () => {
         }
         updateSavedNodes();
         setSelectedNodes([]); // This clears the selected nodes
+        setSelectedNodes([]); // This clears the selected nodes
 
     };
 
@@ -1546,7 +1547,7 @@ const NetworkGraph = () => {
                 break;
             case "2":
 
-                updatedNodes = saved.map(node => {
+                updatedNodes = resetNodes.map(node => {
                     let hidden = node.shape === 'Atomic ER';
                     if (node.id === 54321) {
                         node.comesAfter = saved.filter(n => n.shape === 'iER').sort((a, b) => a.id - b.id).slice(-1)[0]?.id; //ensure last comesAfter shows
@@ -1556,7 +1557,7 @@ const NetworkGraph = () => {
                 });
                 break;
             case "3":
-                updatedNodes = saved.map(node => {
+                updatedNodes = resetNodes.map(node => {
 
 
                     return { ...node, hidden: false };
