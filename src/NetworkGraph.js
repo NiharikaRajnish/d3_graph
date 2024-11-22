@@ -10,6 +10,8 @@ import { useSlider } from './SliderContext';
 import exportSvg from './ExportSvg'; // Import the function
 import { CgTrashEmpty } from 'react-icons/cg';
 import { SiPurescript } from 'react-icons/si';
+import { red } from '@mui/material/colors';
+
 
 
 
@@ -41,6 +43,7 @@ const NetworkGraph = () => {
     const [filterType, setFilterType] = useState('3');
     const [isAlertError, setIsAlertError] = useState(false);
     const [history, setHistory] = useState([]); // Stores previous states for undo
+    const [redoHistory, setRedoHistory] = useState([]);
     const currNodesNumRef = useRef(0);
     const currShownNodesNumRef = useRef(0);
     const prevNodesNumRef = useRef(0);
@@ -807,24 +810,52 @@ const NetworkGraph = () => {
 
     const handleUndo = () => {
         if (history.length === 0) return;
-    
         const lastAction = history[history.length - 1];
+        setRedoHistory(prev => [...prev, lastAction]); // Add the last action to redo history
+
         switch (lastAction.action) {
             case 'addNode':
-                console.log("1")
-                setNodes(nodes.filter(n => n.id !== lastAction.payload.id));
-                setLinks(links.filter(l => l.source.id !== lastAction.payload.id && l.target.id !== lastAction.payload.id));
-                break;
-            case 'addLink':
-                console.log("2")
-            // Undo add link by removing the last link from the stack
-            setLinks(links.slice(0, -1)); // Remove the last link
+            // Update only the node that matches lastAction.payload.id, setting comesAfter and isPartOf to null
+            const updated = nodes.map(n => 
+                n.id === lastAction.payload.id
+                    ? { ...n, comesAfter: null, isPartOf: null }  // Set comesAfter and isPartOf to null for the added node
+                    : n // Keep other nodes unchanged
+            );
+
+            // Update the nodes and links state
+            setNodes(updated.filter(n => n.id !== lastAction.payload.id)); // Remove the node from the updated nodes array
+            setLinks(links); // Assuming links remain unchanged
+
             break;
-               
+            case 'addLink':
+                // Check if there are links to undo
+                if (links.length >= 0) {
+                    // Get the last link from the array
+                    const lastLink = links[links.length - 1];
+                    if(lastLink.type == "Comes After"){
+                        lastLink.source.comesAfter == null
+                        lastLink.target.comesAfter == null
+
+                    }
+                    console.log(links)
+
+                    // Remove the last link from the `links` array
+                    const updatedLinks = links.slice(0,-1);
+                    console.log(updatedLinks)
+
+                    // Update the links state
+                    setLinks(updatedLinks);
+
+                    // Push the undone action to `redoHistory` for redo functionality
+                    setRedoHistory(prev => [...prev, { action: 'addLink', payload: lastLink }]);
+
+                } else {
+                    console.warn("No links to remove in undo addLink.");
+                }
                 break;
             case 'removeNode':
                 setNodes([...nodes, lastAction.payload.node]);
-                setLinks([...links, ...lastAction.payload.links]);
+                // setLinks([...links, ...lastAction.payload.links]);
                 console.log("3");
                 break;
             case 'removeLink':
@@ -849,19 +880,47 @@ const NetworkGraph = () => {
                     setLinks(updatedLinks); // Update links with the original link restored
 
                 break;
-                case 'changeShape':
-                    // Undo the shape change for a single node
-                    const nodeToRevert = nodes.find(n => n.id === lastAction.payload?.nodeId);
-                    if (nodeToRevert) {
-                        // Restore the original shape and color
-                        nodeToRevert.shape = lastAction.payload.originalShape;
-                        nodeToRevert.color = lastAction.payload.originalColor;
-                        setNodes([...nodes]); // Update nodes to trigger re-render
-                    }
-                    console.log("6");
-                    break;
+            case 'changeShape':
+                // Undo the shape change for a single node
+                const nodeToRevert = nodes.find(n => n.id === lastAction.payload?.nodeId);
+                if (nodeToRevert) {
+                    // Save the redo information before reverting the change
+                    setRedoHistory(prev => [
+                        ...prev,
+                        {
+                            action: 'changeShape',
+                            payload: {
+                                nodeId: nodeToRevert.id,
+                                newShape: nodeToRevert.shape, // Save current shape before undo
+                                newColor: nodeToRevert.color, // Save current color before undo
+                            },
+                        },
+                    ]);
+                
+                    // Restore the original shape and color
+                    const updatedNode = {
+                        ...nodeToRevert,
+                        shape: lastAction.payload.originalShape,
+                        color: lastAction.payload.originalColor,
+                    };
+                
+                    // Update the nodes array with the reverted node
+                    setNodes(nodes.map(n => (n.id === updatedNode.id ? updatedNode : n)));
+                  
+                }
+                break;
+            case 'changeMultipleShapes':
 
-                case 'changeMultipleShapes':
+            if (lastAction.payload.originalShapes) {
+                // Collect the current shapes and colors of the affected nodes for redo
+                const redoPayload = nodes
+                    .filter(n => lastAction.payload.originalShapes.some(o => o.id === n.id))
+                    .map(n => ({
+                        id: n.id,
+                        shape: n.shape,
+                        color: n.color,
+                    }));
+
                         // Undo the shape change for multiple nodes
                         for (const originalNode of lastAction.payload.originalShapes) {
                             const node = nodes.find(n => n.id === originalNode.id);
@@ -873,10 +932,21 @@ const NetworkGraph = () => {
                         }
                         setNodes([...nodes]); // Update nodes to trigger re-render
                         setSelectedNodes([]);
-                        console.log("7");
-                     break;
 
-                case 'changeSize':
+                        // Add the redo action to redoHistory
+                        setRedoHistory(prevRedoHistory => [
+                            ...prevRedoHistory,
+                            {
+                                action: 'changeMultipleShapes',
+                                payload: {
+                                    originalShapes: redoPayload, // Save current shapes and colors for redo
+                                },
+                            },
+                        ]);
+                    }
+                     break;
+                    
+            case 'changeSize':
                         // Undo the size change for a single node
                         const nodeToRevert2 = nodes.find(n => n.id === lastAction.payload?.nodeId);
                         if (nodeToRevert2) {
@@ -885,20 +955,39 @@ const NetworkGraph = () => {
                             setNodes([...nodes]); // Trigger re-render to update node size
                         }
                     break;
-            
-                case 'changeMultipleSizes':
-                        // Undo the size change for multiple nodes
-                        for (const originalNode of lastAction.payload.originalSizes) {
-                            const node = nodes.find(n => n.id === originalNode.id);
-                            if (node) {
-                                // Restore the original size for each node
-                                node.size = originalNode.size;
-                            }
-                        }
-                        setNodes([...nodes]); // Trigger re-render to update node sizes
-                    break;
 
-                case 'changeLinkType':
+            case 'changeMultipleSizes':
+                        // Undo the size change for multiple nodes
+                        const updatedNodes = nodes.map(node => {
+                            // Find the corresponding original size in the payload
+                            const originalNode = lastAction.payload.originalSizes.find(n => n.id === node.id);
+                            if (originalNode) {
+                                // Restore the original size if found
+                                return { ...node, size: originalNode.size };
+                            }
+                            return node; // Return unchanged node if not part of the action
+                        });
+                    
+                        // Save the current sizes to redoHistory for potential redo
+                        const currentSizes = nodes.map(node => ({
+                            id: node.id,
+                            size: node.size,
+                        }));
+                    
+                        setRedoHistory(prev => [
+                            ...prev,
+                            {
+                                action: 'changeMultipleSizes',
+                                payload: { originalSizes: currentSizes },
+                            },
+                        ]);
+                    
+                        // Update the nodes state
+                        setNodes(updatedNodes);
+                        break;
+
+
+            case 'changeLinkType':
                         // Undo the link type change by reverting to the original type
                         const linkToRevert = links.find(l => l.id === lastAction.payload.linkId);
                         if (linkToRevert) {
@@ -917,6 +1006,7 @@ const NetworkGraph = () => {
             
                             // Restore the original type association
                             switch (lastAction.payload.originalType) {
+                              
                                 case 'Assesses':
                                     nodes.find(n => n.id === linkToRevert.source.id).assesses = linkToRevert.target.id;
                                     break;
@@ -942,7 +1032,157 @@ const NetworkGraph = () => {
             default:
                 break;
         }
+       
         setHistory(prev => prev.slice(0, -1));
+    };
+
+    const handleRedo = () => {
+        if (redoHistory.length === 0) return;
+        const lastUndoneAction = redoHistory[redoHistory.length - 1];
+        switch (lastUndoneAction.action) {
+            
+            case 'addNode':
+               
+                // Clear comesAfter and isPartOf for the node before adding it to the nodes array
+                const nodeToAdd = {
+                    ...lastUndoneAction.payload,
+                    comesAfter: null,
+                    isPartOf: null,
+                };
+                console.log(nodeToAdd)
+                setNodes([...nodes, nodeToAdd]);
+                break;
+            case 'addLink':
+                
+                setLinks([...links, lastUndoneAction.payload]);
+                setRedoHistory(prev => prev.slice(0, -1));
+                break;
+            case 'removeNode':
+                setNodes(nodes.filter(n => n.id !== lastUndoneAction.payload.node.id));
+                setLinks(links.filter(l => 
+                    l.source.id !== lastUndoneAction.payload.node.id &&
+                    l.target.id !== lastUndoneAction.payload.node.id
+                ));
+                break;
+            case 'removeLink':
+                setLinks(links.filter(l => 
+                    l.source.id !== lastUndoneAction.payload.source.id ||
+                    l.target.id !== lastUndoneAction.payload.target.id
+                ));
+                break;
+            case 'reverseLink':
+                const { originalLink, newLink } = lastUndoneAction.payload;
+                const reversedLinks = links.map(link => 
+                    link.source.id === originalLink.source.id && 
+                    link.target.id === originalLink.target.id ? newLink : link
+                );
+                setLinks(reversedLinks);
+                break;
+            case 'changeShape':
+                    // Handle changeShape redo
+                    const nodeToRedo = nodes.find(n => n.id === lastUndoneAction.payload?.nodeId);
+                    if (nodeToRedo) {
+                        // Apply redo changes
+                        nodeToRedo.shape = lastUndoneAction.payload.newShape;
+                        nodeToRedo.color = lastUndoneAction.payload.newColor;
+                
+                        // Update the nodes array by replacing the updated node
+                        const updatedNodes = nodes.map(n => 
+                            n.id === nodeToRedo.id ? nodeToRedo : n
+                        );
+                       
+                
+                        setNodes(updatedNodes); // Trigger re-render with updated nodes
+                        setRedoHistory(redoHistory.slice(1));
+                    }
+                  
+                    break;
+            case 'changeMultipleShapes':
+                console.log(lastUndoneAction.payload)
+                for (const updatedNode of lastUndoneAction.payload.originalShapes) {
+                    const node = nodes.find(n => n.id === updatedNode.id);
+                    if (node) {
+                        node.shape = updatedNode.shape;
+                        node.color = updatedNode.color;
+                    }
+                    setRedoHistory(redoHistory.slice(1));
+                }
+                setNodes([...nodes]);
+                
+                break;
+            case 'changeSize':
+                const nodeToResize = nodes.find(n => n.id === lastUndoneAction.payload.nodeId);
+                if (nodeToResize) {
+                    nodeToResize.size = lastUndoneAction.payload.originalSize;
+                    setNodes([...nodes]);
+                }
+                break;
+            case 'changeMultipleSizes':
+                    // Redo the size change for multiple nodes
+                    const updatedNodes = nodes.map(node => {
+                        // Find the size to be restored in the redo action
+                        const newSizeNode = lastUndoneAction.payload.originalSizes.find(n => n.id === node.id);
+                        if (newSizeNode) {
+                            // Apply the new size from redo history
+                            return { ...node, size: newSizeNode.size };
+                        }
+                        return node; // Return unchanged node if not part of the redo action
+                    });
+                
+                    // Save the current sizes to the undo history for future undo
+                    const sizesBeforeRedo = nodes.map(node => ({
+                        id: node.id,
+                        size: node.size,
+                    }));
+                
+                    setHistory(prev => [
+                        ...prev,
+                        {
+                            action: 'changeMultipleSizes',
+                            payload: { originalSizes: sizesBeforeRedo },
+                        },
+                    ]);
+                
+                    // Remove the last redo action from redo history
+                    setRedoHistory(prev => prev.slice(0, -1));
+                
+                    // Update the nodes state to apply the redone sizes
+                    setNodes(updatedNodes);
+                    break;
+            // case 'changeLinkType':
+            //     const linkToRedo = links.find(l => l.id === lastUndoneAction.payload.linkId);
+            //     if (linkToRedo) {
+            //         // Reverse the previous undo (apply the original type back)
+            //         switch (lastUndoneAction.payload.originalType) {
+            //             case 'Assesses':
+            //                 nodes.find(n => n.id === lastUndoneAction.payload.sourceNodeId).assesses = linkToRedo.target.id;
+            //                 break;
+            //             case 'Comes After':
+            //                 nodes.find(n => n.id === lastUndoneAction.payload.sourceNodeId).comesAfter = linkToRedo.target.id;
+            //                 break;
+            //             case 'Is Part Of':
+            //                 nodes.find(n => n.id === lastUndoneAction.payload.sourceNodeId).isPartOf = linkToRedo.target.id;
+            //                 break;
+            //         }
+        
+            //         // Apply the new type to the link
+            //         linkToRedo.type = lastUndoneAction.payload.originalType;
+        
+            //         // Update the nodes state to trigger a re-render
+            //         setNodes([...nodes]);
+            //         updateSavedNodes(); // Optionally update the saved state
+        
+            //         // Remove the redo action after it's applied
+            //         setRedoHistory(prevRedoHistory => prevRedoHistory.slice(0, -1));
+            //     }
+            // break;
+            default:
+                break;
+        }
+    
+        // Move the action from redoHistory back to history
+        setRedoHistory(prev => prev.slice(0, -1));
+        setHistory([...history, lastUndoneAction]);
     };
     
 
@@ -1448,6 +1688,7 @@ const NetworkGraph = () => {
                     <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
                     <Button id='recenterButton' variant="outlined">Recenter</Button>
                     <Button onClick={handleUndo} startIcon={<UndoIcon />} variant="outlined" disabled={history.length === 0} >Undo</Button>
+                    <Button onClick={handleRedo} startIcon={<RedoIcon />} variant="outlined" disabled={redoHistory.length === 0} >Redo</Button>
                     <FormControlLabel sx={{ marginLeft: '2px' }}
                         control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
                         label={`${labelsToggled ? 'Hide' : 'Show'} Labels`}
