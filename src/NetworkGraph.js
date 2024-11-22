@@ -887,38 +887,67 @@ const NetworkGraph = () => {
             const title = node.name ? node.name.toLowerCase() : '';
             return title !== 'start' && title !== 'end';
         });
+        const aERNodes = nodesCopy.filter(node => node.shape === 'aER');
         const iERNodes = nodesCopy.filter(node => node.shape === 'iER');
-        let cnt = 0;
-        let tmpID = -5
-        let lastFx = 0
-        nodesCopy.forEach((node, index) => {
-            node.fixed = false;
-            node.fx = null;
-            node.fy = null;
-            if (node.shape === 'iER') {
-                cnt++;
-                tmpID = node.id;
-                node.fixed = true;
-                node.fy = height / 2;
-                node.fx = (cnt * (width / iERNodes.length)) - (width * 0.2);
-                lastFx = node.fx;
+        const includedIERs = filterType !== '1' ? iERNodes : []
+        const includedAERs = filterType === '1' ? aERNodes : aERNodes.filter(n => (n.comesAfter && nodes.some(node => node.comesAfter === n.id)))
+        const contERsStartEnd = [...includedIERs, ...includedAERs];
+        const totalWidth = nodes.find(n => n.id === 54321).fx - nodes.find(n => n.id === 0).fx
+        const remainingWidth = totalWidth - (70 * contERsStartEnd.length);
+        const gapSize = remainingWidth / (contERsStartEnd.length + 1);
+        let pos = 50;
+        let allPositions = [];
+        for (let i = 0; i < contERsStartEnd.length; i++) {
+            pos = pos + 70 + gapSize;
+            allPositions.push(pos)
+        }
+        let cntIER = 0
+        let cntAER = 0
+        for (let i = 0; i < contERsStartEnd.length; i++) {
+            // alternate setting positions for iERs and aERs with iERs first
+            if (i % 2 === 0) {
+                if (includedIERs[cntIER]) {
+                    includedIERs[cntIER].fx = allPositions[i]
+                    includedIERs[cntIER].fy = height / 2
+                    cntIER++
+                } else if (includedAERs[cntAER]) {
+                    includedAERs[cntAER].fx = allPositions[i]
+                    includedAERs[cntAER].fy = height / 2
+                    cntAER++
+                }
+            } else {
+                if (includedAERs[cntAER]) {
+                    includedAERs[cntAER].fx = allPositions[i]
+                    includedAERs[cntAER].fy = height / 2
+                    cntAER++
+                } else if (includedIERs[cntIER]) {
+                    includedIERs[cntIER].fx = allPositions[i]
+                    includedIERs[cntIER].fy = height / 2
+                    cntIER++
+                }
             }
-            else if (node.shape === 'aER') {
-                node.fy = (node.comesAfter || filterType === '1') ? (height) / 2 : null;
+        }
+        let cnt = 0;
+        nodesCopy.forEach((node, index) => {
+            if (contERsStartEnd.some(n => n.id === node.id)) {
+                node.fixed = true;
+            }
+            else {
+                node.fixed = false;
+                node.fx = null;
+                node.fy = null;
             }
         });
         // filter 'iER' nodes then get the average fx position between each consecutive iER node pairs
-        const aERNodes = nodesCopy.filter(node => node.shape === 'aER');
-        const avgFXs = []
-        const iERsStartEnd = [...iERNodes, nodes.find(n => n.id === 54321)]
-        for (let i = 0; i < iERsStartEnd.length - 1; i++) {
-            const iER1 = iERsStartEnd[i];
-            const iER2 = iERsStartEnd[i + 1];
-            avgFXs.push((iER1.fx + iER2.fx) / 2);
-        }
-        for (let i = 0; i < aERNodes.length; i++) {
-            aERNodes[i].fx = !aERNodes[i].fx ? avgFXs[i] : aERNodes[i].fx;
-        }
+        // const avgFXs = []
+        // for (let i = 0; i < contERsStartEnd.length - 1; i++) {
+        //     const iER1 = contERsStartEnd[i];
+        //     const iER2 = contERsStartEnd[i + 1];
+        //     avgFXs.push((iER1.fx + iER2.fx) / 2);
+        // }
+        // for (let i = 0; i < aERNodes.length; i++) {
+        //     aERNodes[i].fx = !aERNodes[i].fx ? avgFXs[i] : aERNodes[i].fx;
+        // }
         const maxIdNode = iERNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, iERNodes[0]);
         const maxIdNodeAER = aERNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, iERNodes[0]);
         const minIdNode = iERNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, iERNodes[0]);
@@ -1472,12 +1501,12 @@ const NetworkGraph = () => {
         saved = (saved.length > 2 || nodes.length === saved.length) ? saved : nodes
 
         // Reset nodes to avoid issues when switching views
-        let resetNodes = saved.map(node => ({
-            ...node,
-            hidden: false,      // Ensure nodes are visible initially
-            comesAfter: (node.shape === 'aER' || node.shape === 'rER') ? null : node.comesAfter,   // Reset comesAfter only for aER and rER
+        // let resetNodes = saved.map(node => ({
+        //     ...node,
+        //     hidden: false,      // Ensure nodes are visible initially
+        //     comesAfter: (node.shape === 'aER' || node.shape === 'rER') ? null : node.comesAfter,   // Reset comesAfter only for aER and rER
 
-        }));
+        // }));
 
         let updatedNodes = [];
         switch (fType) {
@@ -1517,7 +1546,7 @@ const NetworkGraph = () => {
                 break;
             case "2":
 
-                updatedNodes = resetNodes.map(node => {
+                updatedNodes = saved.map(node => {
                     let hidden = node.shape === 'Atomic ER';
                     if (node.id === 54321) {
                         node.comesAfter = saved.filter(n => n.shape === 'iER').sort((a, b) => a.id - b.id).slice(-1)[0]?.id; //ensure last comesAfter shows
@@ -1527,7 +1556,7 @@ const NetworkGraph = () => {
                 });
                 break;
             case "3":
-                updatedNodes = resetNodes.map(node => {
+                updatedNodes = saved.map(node => {
 
 
                     return { ...node, hidden: false };
