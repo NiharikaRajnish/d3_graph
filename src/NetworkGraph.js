@@ -950,22 +950,30 @@ const NetworkGraph = () => {
         //     aERNodes[i].fx = !aERNodes[i].fx ? avgFXs[i] : aERNodes[i].fx;
         // }
         const maxIdNode = iERNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, iERNodes[0]);
-        const maxIdNodeAER = aERNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, iERNodes[0]);
+        const maxIdNodeAER = aERNodes.reduce((maxNode, node) => node.id > maxNode.id ? node : maxNode, aERNodes[0]);
         const minIdNode = iERNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, iERNodes[0]);
-        const minIdNodeAER = aERNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, iERNodes[0]);
+        const minIdNodeAER = aERNodes.reduce((minNode, node) => node.id < minNode.id ? node : minNode, aERNodes[0]);
         const tmpNodes = nodes.filter(n => (n.id === 54321) || (n.id === 0)).forEach(node => { // add only start and end
             if (node.id === 54321) {
                 const updEnd = {
                     ...node,
                     fy: height / 2,
                     fx: width - 50,
-                    comesAfter: filterType !== '1' ? maxIdNode.id : maxIdNodeAER.id
+                }
+                if (filterType === '1 ' && maxIdNodeAER) {
+                    node.comesAfter = maxIdNodeAER.id;
+                } else if (filterType !== '1' && maxIdNode) {
+                    node.comesAfter = maxIdNode.id;
                 }
                 nodesCopy.push(updEnd);
             }
             else if (node.id === 0) {
                 node.fy = height / 2;
-                nodesCopy.find(n => n.id === (filterType !== '1' ? minIdNode.id : minIdNodeAER.id)).comesAfter = 0;
+                if (filterType === '1 ' && minIdNodeAER) {
+                    nodesCopy.find(n => n.id === (minIdNodeAER.id)).comesAfter = 0;
+                } else if (filterType !== '1' && minIdNode) {
+                    nodesCopy.find(n => n.id === (minIdNode.id)).comesAfter = 0;
+                }
                 nodesCopy.push(node)
             };
             return node
@@ -1547,7 +1555,7 @@ const NetworkGraph = () => {
                 break;
             case "2":
 
-                updatedNodes = resetNodes.map(node => {
+                updatedNodes = saved.map(node => {
                     let hidden = node.shape === 'Atomic ER';
                     if (node.id === 54321) {
                         node.comesAfter = saved.filter(n => n.shape === 'iER').sort((a, b) => a.id - b.id).slice(-1)[0]?.id; //ensure last comesAfter shows
@@ -1557,7 +1565,7 @@ const NetworkGraph = () => {
                 });
                 break;
             case "3":
-                updatedNodes = resetNodes.map(node => {
+                updatedNodes = saved.map(node => {
 
 
                     return { ...node, hidden: false };
@@ -1668,7 +1676,7 @@ const NetworkGraph = () => {
                     <Button onClick={() => setDialogOpen(true)} color={'error'} startIcon={<CgTrashEmpty />} variant="contained">Clear</Button>
                     <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
                     <Button id='recenterButton' variant="outlined">Recenter</Button>
-                    <Button onClick={handleAutoLayout} color={'success'} variant="contained">Auto Layout</Button>
+                    <Button onClick={nodes.length > 2 ? handleAutoLayout : null} color={'success'} variant="contained">Auto Layout</Button>
                     <Button onClick={handleUndo} startIcon={<UndoIcon />} variant="outlined" disabled={history.length === 0} >Undo</Button>
                     <FormControlLabel sx={{ marginLeft: '2px' }}
                         control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
