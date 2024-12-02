@@ -23,6 +23,9 @@ const NetworkGraph = () => {
         { id: 54321, name: 'end', type: 'end', shape: 'diamond', size: 10, color: 'green', fx: width - 50, fy: height / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
     ];
     const initialLinks = [];
+    const originalIdRef = useRef(null);
+    const originalComesAfterRef = useRef(null);
+    const originalIsPartOfRef = useRef(null);
 
     const [nodes, setNodes] = useState(localStorage.getItem('nodes3') ? JSON.parse(localStorage.getItem('nodes3')) : initialNodes);
     const [links, setLinks] = useState(initialLinks);
@@ -809,40 +812,29 @@ const NetworkGraph = () => {
     };
 
     const handleUndo = () => {
+        console.log(nodes)
         if (history.length === 0) return;
         const lastAction = history[history.length - 1];
         setRedoHistory(prev => [...prev, lastAction]); // Add the last action to redo history
     
         switch (lastAction.action) {
             case 'addNode':
-            // Update only the node that matches lastAction.payload.id, setting comesAfter and isPartOf to null
-            const updated = nodes.map(n => 
-                n.id === lastAction.payload.id
-                    ? { ...n, comesAfter: null, isPartOf: null }  // Set comesAfter and isPartOf to null for the added node
-                    : n // Keep other nodes unchanged
-            );
-
-            // Update the nodes and links state
-            setNodes(updated.filter(n => n.id !== lastAction.payload.id)); // Remove the node from the updated nodes array
-            setLinks(links); // Assuming links remain unchanged
-
+            setNodes(nodes.filter(n => n.id !== lastAction.payload.id)); // Remove the node from the updated nodes array
+            console.log(nodes)
+        
             break;
             case 'addLink':
                 // Check if there are links to undo
                 if (links.length >= 0) {
                     // Get the last link from the array
                     const lastLink = links[links.length - 1];
-                    if(lastLink.type == "Comes After"){
-                        lastLink.source.comesAfter == null
-                        lastLink.target.comesAfter == null
-
-                    }
 
                     // Remove the last link from the `links` array
                     const updatedLinks = links.slice(0,-1);
 
                     // Update the links state
                     setLinks(updatedLinks);
+                    setNodes(nodes)
 
                     // Push the undone action to `redoHistory` for redo functionality
                     setRedoHistory(prev => [...prev, { action: 'addLink', payload: lastLink }]);
@@ -853,14 +845,12 @@ const NetworkGraph = () => {
                 break;
             case 'removeNode':
                 setNodes([...nodes, lastAction.payload.node]);
-                // setLinks([...links, ...lastAction.payload.links]);
     
                 break;
             case 'removeLink':
                 setLinks([...links, lastAction.payload]);
          
                 break;
-
             case 'reverseLink':
                     // Undo the reversal by swapping the link back to its original state
                     const { originalLink, newLink } = lastAction.payload;
@@ -1035,19 +1025,43 @@ const NetworkGraph = () => {
         switch (lastUndoneAction.action) {
             
             case 'addNode':
-               
-                // Clear comesAfter and isPartOf for the node before adding it to the nodes array
-                const nodeToAdd = {
-                    ...lastUndoneAction.payload,
-                    comesAfter: null,
-                    isPartOf: null,
-                };
+               console.log(lastUndoneAction.payload.id)
+               originalIdRef.current = lastUndoneAction.payload.id;
+               originalComesAfterRef.current = lastUndoneAction.payload.comesAfter;
+               originalIsPartOfRef.current = lastUndoneAction.payload.isPartOf;
+
+                 const nodeToAdd = {
+                     ...lastUndoneAction.payload,
+                      comesAfter: null,
+                      isPartOf: null,
+                 };
                 setNodes([...nodes, nodeToAdd]);
                 setHistory([...history, lastUndoneAction]);
                 break;
             case 'addLink':
-                
-                setLinks([...links, lastUndoneAction.payload]);
+            const originalId = originalIdRef.current;
+            
+                setNodes(nodes => {
+  // Find the index of the node with the matching ID
+  const nodeIndex = nodes.findIndex(node => node.id === originalId);
+  console.log(originalId)
+console.log(nodeIndex)
+  // If the node is found, modify it in place
+  if (nodeIndex !== -1) {
+    // Directly modify the comesAfter and isPartOf properties of the node at the found index
+    nodes[nodeIndex] = {
+      ...nodes[nodeIndex], // Keep all other properties of the node
+      comesAfter: originalComesAfterRef.current, // Restore the original comesAfter value
+      isPartOf: originalIsPartOfRef.current     // Restore the original isPartOf value
+    };
+  }
+
+  // Return the updated nodes array (React will detect this as a change due to reference change)
+  return [...nodes];  // We create a new array reference so React re-renders
+});
+console.log(nodes)
+                 setLinks([...links, lastUndoneAction.payload]);
+
                 setRedoHistory(prev => prev.slice(0, -1));
                 setHistory([...history, lastUndoneAction]);
                 break;
