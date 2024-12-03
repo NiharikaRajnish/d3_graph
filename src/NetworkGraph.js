@@ -1946,32 +1946,15 @@ console.log(nodes)
         <div>
             <div className='navbar'>
                 <Navbar onExportClick={handleExportClick} onDownloadCSV={downloadCSV} />
-                <Stack m={'0 auto'} spacing={0.5} direction='row'>
-                    <>
-                        <label htmlFor="csv-upload">
-                            <Button variant="contained" component="span" onClick={() => setDialogOpen2(true)}>
-                                Upload CSV
-                            </Button>
-                        </label>
-                    </>
+                <Stack m={'0 auto'} spacing={2} direction='row' >
+                <Button variant="contained" component="span" onClick={() => setDialogOpen2(true)}>Upload CSV</Button>
                     <Button onClick={() => setDialogOpen(true)} color={'error'} startIcon={<CgTrashEmpty />} variant="contained">Clear</Button>
                     <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
                     <Button id='recenterButton' variant="outlined">Recenter</Button>
                     <Button onClick={nodes.length > 2 ? handleAutoLayout : null} color={'success'} variant="contained">Auto Layout</Button>
                     <Button onClick={handleUndo} startIcon={<UndoIcon />} variant="outlined" disabled={history.length === 0} >Undo</Button>
                     <Button onClick={handleRedo} startIcon={<RedoIcon />} variant="outlined" disabled={redoHistory.length === 0} >Redo</Button>
-                    <FormControlLabel sx={{ marginLeft: '2px' }}
-                        control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
-                        label={`${labelsToggled ? 'Hide' : 'Show'} Labels`}
-                    />
-                    <FormControlLabel sx={{ marginLeft: '2px' }}
-                        control={<Switch size="small" checked={legendToggled} onChange={() => setLegendToggled(!legendToggled)} />}
-                        label={`Legend ${!legendToggled ? '(Hidden)' : '(Showing)'} `}
-                    />
-                </Stack>
-                {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
-
-                <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
+                    <FormControl variant="outlined">
                     <InputLabel>Views</InputLabel>
                     <Select
                         value={filterType}
@@ -1987,6 +1970,18 @@ console.log(nodes)
                         <MenuItem value="4">View 4: Requirements</MenuItem>
                     </Select>
                 </FormControl>
+                </Stack>
+                {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
+                <div style={{ position: 'absolute', bottom: '10px', left: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <FormControlLabel sx={{ marginLeft: '2px' }}
+                        control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
+                        label={`${labelsToggled ? 'Hide' : 'Show'} Labels`}
+                    />
+                    <FormControlLabel sx={{ marginLeft: '2px' }}
+                        control={<Switch size="small" checked={legendToggled} onChange={() => setLegendToggled(!legendToggled)} />}
+                        label={`Legend ${!legendToggled ? '(Hidden)' : '(Showing)'} `}
+                    />
+  </div>
             </div>
 
             {/* upload csv dialog */}
