@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button, Popover, TextField } from '@mui/material';
 import { Link as LinkIcon, Remove } from '@mui/icons-material';
 
-const NodePopover = ({ id, open, anchorEl, onClose, handleAddLink, selectedNode, selectedNodes , handleShapeChange, handleSizeChange, handleRenameNode, handleRemoveNode }) => {
+const NodePopover = ({ id, open, anchorEl, onClose, handleCollapse, isCollapsed, setIsCollapsed, handleAddLink, selectedNode, selectedNodes , handleShapeChange, handleSizeChange, handleRenameNode, handleRemoveNode }) => {
     const [newName, setNewName] = useState(selectedNode?.name || '');
     
 
@@ -72,6 +72,26 @@ if(selectedNode != ""){
                 
             }}
         >
+
+<Button
+                onClick={handleCollapse}
+                variant="outlined"
+                margin="dense"
+                size="small"
+                sx={{
+                    margin:2,
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    height:'30px',
+  
+                    maxWidth: '100%',  // Ensure it doesn’t overflow container
+                    '@media (max-width: 600px)': {
+                      width: '100%',  // Full-width on smaller screens
+                    },
+                  }}
+            >
+                {isCollapsed ? 'Uncollapse' : 'Collapse'} {/* Toggle button text */}
+            </Button>
             <Button
                 onClick={handleAddLink}
                 startIcon={<LinkIcon />}

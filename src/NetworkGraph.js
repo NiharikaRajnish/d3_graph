@@ -47,6 +47,7 @@ const NetworkGraph = () => {
     const [filterType, setFilterType] = useState('3');
     const [isAlertError, setIsAlertError] = useState(false);
     const [redoHistory, setRedoHistory] = useState([]);
+    const [isCollapsed, setIsCollapsed] = useState(false); // Track collapse state
     const [history, setHistory] = useState([]); // Stores previous states for undo
     const currNodesNumRef = useRef(0);
     const currShownNodesNumRef = useRef(0);
@@ -252,8 +253,10 @@ const NetworkGraph = () => {
                             return '#2ca02c';
                         case 'rER':
                             return '#7f7f7f';
+                        case 'diamond':
+                            return 'green';
                         default:
-                            return '#ADD8E6';
+                            return '#fda660';
                     }
                 })
                 .attr('transform', d => `scale(${getNodeScale(d.size)})`);
@@ -476,8 +479,10 @@ const NetworkGraph = () => {
                         return '#2ca02c';
                     case 'rER':
                         return '#7f7f7f';
+                    case 'diamond':
+                            return 'green';
                     default:
-                        return '#ADD8E6';
+                        return '#fda660';
                 }
             })
             .attr('transform', (d, i) => {
@@ -577,8 +582,10 @@ const NetworkGraph = () => {
                         return '#2ca02c';
                     case 'rER':
                         return '#7f7f7f';
+                    case 'diamond':
+                        return 'green';
                     default:
-                        return '#ADD8E6';
+                        return '#fda660';
                 }
             })
             // .attr('transform', d => `scale(${getNodeScale(d.size)})`)
@@ -744,7 +751,7 @@ const NetworkGraph = () => {
             selectedNode.shape = newShape;
             switch (newShape) {
                 case 'Atomic ER':
-                    selectedNode.color = '#ADD8E6';
+                    selectedNode.color = '#fda660';
                     break;
                 case 'aER':
                     selectedNode.color = 'orange';
@@ -755,6 +762,8 @@ const NetworkGraph = () => {
                 case 'rER':
                     selectedNode.color = 'green';
                     break;
+                case 'diamond':
+                        return 'green';
                 default:
                     selectedNode.color = color('default');
             }
@@ -775,7 +784,7 @@ const NetworkGraph = () => {
                     i.shape = newShape;
                     switch (newShape) {
                         case 'Atomic ER':
-                            i.color = '#ADD8E6';
+                            i.color = '#fda660';
                             break;
                         case 'aER':
                             i.color = 'orange';
@@ -880,7 +889,7 @@ const NetworkGraph = () => {
         const maxIdNode = nodes.filter(n => n.id !== 54321).reduce((maxNode, node) => (node.id > maxNode.id) ? node : maxNode, nodes[0]);
         const id = maxIdNode.id + 1;
         const name = `ER ${id}`;
-        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, assesses: null, isPartOf: null, comesAfter: null };
+        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#fda660', x: width / 2, y: height / 2, assesses: null, isPartOf: null, comesAfter: null };
         setNodes([...nodes, newNode]);
         updateSavedNodes();
         saveToHistory('addNode', newNode);
@@ -989,6 +998,8 @@ const NetworkGraph = () => {
 
     const handleClear = (yn) => {
         if (yn) {
+            setHistory([]);
+            setRedoHistory([]);
             localStorage.clear();
             let strtEndNodes = nodes.filter(n => (n.id === 54321) || (n.id === 0)),
                 currH = window.innerHeight * 0.9,
@@ -1517,8 +1528,14 @@ console.log(nodes)
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
+                    setHistory([]);
+                    setRedoHistory([]);
+                    // Set the filter type to 3
+                    setFilterType(3);
+                    handleFilterNodes(3);
                     const text = e.target.result;
                     parseCSV(text);
+
                 } catch (error) {
                     // Display error popup
                     setIsAlertError(true);
@@ -1653,6 +1670,30 @@ console.log(nodes)
         });
         return newLinks;
     };
+    
+    const handleCollapse = () => {
+        console.log(selectedNode)
+    
+        const id = selectedNode.id
+    
+        const updatedNodes = nodes.map((node) => {
+            // Toggle the 'hidden' property based on current collapse state
+            console.log(node.isPartOf)
+            if (node.isPartOf === id) {
+                return { ...node, hidden: !isCollapsed }; // Toggle visibility
+            }
+            return node;
+        });
+    
+        // Update the nodes state
+        setNodes([...updatedNodes]);
+    
+        // Toggle the collapse state
+        setIsCollapsed((prevState) => !prevState);
+    
+      };
+    
+    
 
     const handleAddLink = () => {
         setLinkingNode(selectedNode);
@@ -2051,6 +2092,9 @@ console.log(nodes)
                     open={Boolean(anchorElNode)}
                     anchorEl={anchorElNode}
                     onClose={handleCloseNode}
+                    handleCollapse={handleCollapse}
+                    isCollapsed={isCollapsed}
+                    setIsCollapsed={setIsCollapsed}
                     handleAddLink={handleAddLink}
                     selectedNode={selectedNode}
                     selectedNodes={[]}
