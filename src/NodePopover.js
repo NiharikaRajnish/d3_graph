@@ -79,7 +79,7 @@ if(selectedNode != ""){
                 margin="dense"
                 size="small"
                 sx={{
-                    margin:2,
+                    margin:1,
                     whiteSpace: 'nowrap',
                     textOverflow: 'ellipsis',
                     height:'30px',
@@ -99,7 +99,7 @@ if(selectedNode != ""){
                 margin="dense"
                 size="small"
                 sx={{
-                    margin:2,
+                    margin:1,
                     whiteSpace: 'nowrap',
                     textOverflow: 'ellipsis',
                     height:'30px',
