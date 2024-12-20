@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, FormControlLabel, FormGroup, Slide, Stack, Switch, Typography } from '@mui/material';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, FormControlLabel, FormGroup, LinearProgress, Slide, Stack, Switch, Typography } from '@mui/material';
 import { MenuItem, Select, FormControl, InputLabel } from '@mui/material';
 import { Add, ErrorOutline, Visibility, Undo as UndoIcon, Redo as RedoIcon } from '@mui/icons-material';
 import NodePopover from './NodePopover';
@@ -48,6 +48,7 @@ const NetworkGraph = () => {
     const prevNodesNumRef = useRef(0);
     const prevShownNodesNumRef = useRef(0);
     const svgRef = useRef(null);
+    const progressRef = useRef(null);
     const color = d3.scaleSequential(d3.interpolateOranges);
     const linkingNodeRef = useRef(linkingNode);
     const { sliderValue, setSliderValue, aERSliderValue, setaERSliderValue, iERSliderValue, setIERSliderValue, rERSliderValue, setrERSliderValue, atomicSliderValue, setatomicSliderValue } = useSlider();
@@ -225,9 +226,12 @@ const NetworkGraph = () => {
         const svg = d3.select(svgRef.current);
         // height = svg.node().getBoundingClientRect().height * 0.9;
         // width = svg.node().getBoundingClientRect().width * 0.9;
-
+        let cntr = 0;
         const ticked = () => {
-
+            if (cntr === 0) {
+                progressRef.current.style.visibility = 'visible';
+            }
+            cntr++;
             svg.selectAll('.node')
                 .attr('transform', d => `translate(${d.fx || d.x},${d.fy || d.y})`)
                 .attr("cx", (d) => { return d.x = Math.max(radius, Math.min(width - 100 - radius, d.x)); })
@@ -365,6 +369,7 @@ const NetworkGraph = () => {
                     })
                     i > 0 && setNodes([...nodes])
                     saveNodesToLocalStorage(nodes, filterType);
+                    progressRef.current.style.visibility = 'hidden';
                 });
 
 
@@ -891,7 +896,7 @@ const NetworkGraph = () => {
         const aERNodes = nodesCopy.filter(node => node.shape === 'aER');
         const iERNodes = nodesCopy.filter(node => node.shape === 'iER');
         const includedIERs = filterType !== '1' ? iERNodes : []
-        const includedAERs = filterType === '1' ? aERNodes : aERNodes.filter(n => (n.comesAfter && nodes.some(node => node.comesAfter === n.id)))
+        const includedAERs = filterType === '1' ? aERNodes : aERNodes.filter(n => (n.comesAfter || nodes.some(node => node.comesAfter === n.id)))
         const contERsStartEnd = [...includedIERs, ...includedAERs];
         const totalWidth = nodes.find(n => n.id === 54321).fx - nodes.find(n => n.id === 0).fx
         const remainingWidth = totalWidth - (70 * contERsStartEnd.length);
@@ -1237,6 +1242,7 @@ const NetworkGraph = () => {
             reader.onload = (e) => {
                 try {
                     const text = e.target.result;
+                    setFilterType('3');
                     parseCSV(text);
                 } catch (error) {
                     // Display error popup
@@ -1706,6 +1712,7 @@ const NetworkGraph = () => {
                     </Select>
                 </FormControl>
             </div>
+            <LinearProgress ref={progressRef} color="secondary" style={{ visibility: 'hidden', marginTop: '3px' }} />
 
             {/* upload csv dialog */}
             <Dialog open={dialogOpen2} onClose={() => setDialogOpen2(false)}>
