@@ -22,6 +22,10 @@ const NetworkGraph = () => {
         { id: 54321, name: 'end', type: 'end', shape: 'diamond', size: 10, color: 'green', fx: initW - 50, fy: initH / 2, fixed: true, assesses: null, isPartOf: null, comesAfter: null } // Fixed position for end node
     ];
     const initialLinks = [];
+    const originalIdRef = useRef(null);
+    const originalComesAfterRef = useRef(null);
+    const originalIsPartOfRef = useRef(null);
+
 
     const [nodes, setNodes] = useState(localStorage.getItem('nodes3') ? JSON.parse(localStorage.getItem('nodes3')) : initialNodes);
     const [links, setLinks] = useState(initialLinks);
@@ -42,6 +46,8 @@ const NetworkGraph = () => {
     const [linkingMessage, setLinkingMessage] = useState('');
     const [filterType, setFilterType] = useState('3');
     const [isAlertError, setIsAlertError] = useState(false);
+    const [redoHistory, setRedoHistory] = useState([]);
+    const [isCollapsed, setIsCollapsed] = useState(false); // Track collapse state
     const [history, setHistory] = useState([]); // Stores previous states for undo
     const currNodesNumRef = useRef(0);
     const currShownNodesNumRef = useRef(0);
@@ -251,8 +257,10 @@ const NetworkGraph = () => {
                             return '#2ca02c';
                         case 'rER':
                             return '#7f7f7f';
+                        case 'diamond':
+                            return 'green';
                         default:
-                            return '#ADD8E6';
+                            return '#fda660';
                     }
                 })
                 .attr('transform', d => `scale(${getNodeScale(d.size)})`);
@@ -476,8 +484,10 @@ const NetworkGraph = () => {
                         return '#2ca02c';
                     case 'rER':
                         return '#7f7f7f';
+                    case 'diamond':
+                            return 'green';
                     default:
-                        return '#ADD8E6';
+                        return '#fda660';
                 }
             })
             .attr('transform', (d, i) => {
@@ -577,8 +587,10 @@ const NetworkGraph = () => {
                         return '#2ca02c';
                     case 'rER':
                         return '#7f7f7f';
+                    case 'diamond':
+                        return 'green';
                     default:
-                        return '#ADD8E6';
+                        return '#fda660';
                 }
             })
             // .attr('transform', d => `scale(${getNodeScale(d.size)})`)
@@ -744,7 +756,7 @@ const NetworkGraph = () => {
             selectedNode.shape = newShape;
             switch (newShape) {
                 case 'Atomic ER':
-                    selectedNode.color = '#ADD8E6';
+                    selectedNode.color = '#fda660';
                     break;
                 case 'aER':
                     selectedNode.color = 'orange';
@@ -755,6 +767,8 @@ const NetworkGraph = () => {
                 case 'rER':
                     selectedNode.color = 'green';
                     break;
+                case 'diamond':
+                        return 'green';
                 default:
                     selectedNode.color = color('default');
             }
@@ -775,7 +789,7 @@ const NetworkGraph = () => {
                     i.shape = newShape;
                     switch (newShape) {
                         case 'Atomic ER':
-                            i.color = '#ADD8E6';
+                            i.color = '#fda660';
                             break;
                         case 'aER':
                             i.color = 'orange';
@@ -880,7 +894,7 @@ const NetworkGraph = () => {
         const maxIdNode = nodes.filter(n => n.id !== 54321).reduce((maxNode, node) => (node.id > maxNode.id) ? node : maxNode, nodes[0]);
         const id = maxIdNode.id + 1;
         const name = `ER ${id}`;
-        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#ADD8E6', x: width / 2, y: height / 2, assesses: null, isPartOf: null, comesAfter: null };
+        const newNode = { id, name, shape: 'Atomic ER', size: 7, color: '#fda660', x: width / 2, y: height / 2, assesses: null, isPartOf: null, comesAfter: null };
         setNodes([...nodes, newNode]);
         updateSavedNodes();
         saveToHistory('addNode', newNode);
@@ -989,6 +1003,8 @@ const NetworkGraph = () => {
 
     const handleClear = (yn) => {
         if (yn) {
+            setHistory([]);
+            setRedoHistory([]);
             localStorage.clear();
             let strtEndNodes = nodes.filter(n => (n.id === 54321) || (n.id === 0)),
                 currH = window.innerHeight * 0.9,
@@ -1009,145 +1025,421 @@ const NetworkGraph = () => {
     };
 
     const handleUndo = () => {
+        console.log(nodes)
         if (history.length === 0) return;
-
         const lastAction = history[history.length - 1];
+        setRedoHistory(prev => [...prev, lastAction]); // Add the last action to redo history
+    
         switch (lastAction.action) {
             case 'addNode':
-                console.log("1")
-                setNodes(nodes.filter(n => n.id !== lastAction.payload.id));
-                setLinks(links.filter(l => l.source.id !== lastAction.payload.id && l.target.id !== lastAction.payload.id));
-                break;
+            setNodes(nodes.filter(n => n.id !== lastAction.payload.id)); // Remove the node from the updated nodes array
+            console.log(nodes)
+        
+            break;
             case 'addLink':
-                console.log("2")
-                // Undo add link by removing the last link from the stack
-                setLinks(links.slice(0, -1)); // Remove the last link
-                break;
+                // Check if there are links to undo
+                if (links.length >= 0) {
+                    // Get the last link from the array
+                    const lastLink = links[links.length - 1];
 
+                    // Remove the last link from the `links` array
+                    const updatedLinks = links.slice(0,-1);
+
+                    // Update the links state
+                    setLinks(updatedLinks);
+                    setNodes(nodes)
+
+                    // Push the undone action to `redoHistory` for redo functionality
+                    setRedoHistory(prev => [...prev, { action: 'addLink', payload: lastLink }]);
+
+                } else {
+                    console.warn("No links to remove in undo addLink.");
+                }
                 break;
             case 'removeNode':
                 setNodes([...nodes, lastAction.payload.node]);
-                setLinks([...links, ...lastAction.payload.links]);
-                console.log("3");
+    
                 break;
             case 'removeLink':
                 setLinks([...links, lastAction.payload]);
-                console.log("4");
+         
                 break;
-
             case 'reverseLink':
-                // Undo the reversal by swapping the link back to its original state
-                const { originalLink, newLink } = lastAction.payload;
-                console.log("originalLink", originalLink);
+                    // Undo the reversal by swapping the link back to its original state
+                    const { originalLink, newLink } = lastAction.payload;
 
-
-                // Replace the reversed link (newLink) with the original link (originalLink)
-                const updatedLinks = links.map(link =>
-                    link.source.id === newLink.source.id && link.target.id === newLink.target.id ? originalLink : link
-                );
-
-                console.log("Updated Links:", updatedLinks);
-                console.log("newLink:", newLink);
-
-                setLinks(updatedLinks); // Update links with the original link restored
+                    // Replace the reversed link (newLink) with the original link (originalLink)
+                    const updatedLinks = links.map(link => 
+                        link.source.id === newLink.source.id  && link.target.id === newLink.target.id ? originalLink : link
+                    );
+        
+                    setLinks(updatedLinks); // Update links with the original link restored
 
                 break;
             case 'changeShape':
                 // Undo the shape change for a single node
                 const nodeToRevert = nodes.find(n => n.id === lastAction.payload?.nodeId);
                 if (nodeToRevert) {
+                    // Save the redo information before reverting the change
+                    setRedoHistory(prev => [
+                        ...prev,
+                        {
+                            action: 'changeShape',
+                            payload: {
+                                nodeId: nodeToRevert.id,
+                                newShape: nodeToRevert.shape, // Save current shape before undo
+                                newColor: nodeToRevert.color, // Save current color before undo
+                            },
+                        },
+                    ]);
+                
                     // Restore the original shape and color
-                    nodeToRevert.shape = lastAction.payload.originalShape;
-                    nodeToRevert.color = lastAction.payload.originalColor;
-                    setNodes([...nodes]); // Update nodes to trigger re-render
+                    const updatedNode = {
+                        ...nodeToRevert,
+                        shape: lastAction.payload.originalShape,
+                        color: lastAction.payload.originalColor,
+                    };
+                
+                    // Update the nodes array with the reverted node
+                    setNodes(nodes.map(n => (n.id === updatedNode.id ? updatedNode : n)));
+                  
                 }
-                console.log("6");
                 break;
-
             case 'changeMultipleShapes':
-                // Undo the shape change for multiple nodes
-                for (const originalNode of lastAction.payload.originalShapes) {
-                    const node = nodes.find(n => n.id === originalNode.id);
-                    if (node) {
-                        // Restore each node's original shape and color
-                        node.shape = originalNode.shape;
-                        node.color = originalNode.color;
-                    }
-                }
-                setNodes([...nodes]); // Update nodes to trigger re-render
-                setSelectedNodes([]);
-                console.log("7");
-                break;
+                console.log(lastAction.payload)
+            if (lastAction.payload.originalShapes) {
+                // Collect the current shapes and colors of the affected nodes for redo
+                const redoPayload = nodes
+                    .filter(n => lastAction.payload.originalShapes.some(o => o.id === n.id))
+                    .map(n => ({
+                        id: n.id,
+                        shape: n.shape,
+                        color: n.color,
+                    }));
 
+                        // Undo the shape change for multiple nodes
+                        for (const originalNode of lastAction.payload.originalShapes) {
+                            const node = nodes.find(n => n.id === originalNode.id);
+                            if (node) {
+                                // Restore each node's original shape and color
+                                node.shape = originalNode.shape;
+                                node.color = originalNode.color;
+                            }
+                        }
+                        setNodes([...nodes]); // Update nodes to trigger re-render
+                        setSelectedNodes([]);
+                    
+                        // Add the redo action to redoHistory
+                        setRedoHistory(prevRedoHistory => [
+                            ...prevRedoHistory,
+                            {
+                                action: 'changeMultipleShapes',
+                                payload: {
+                                    originalShapes: redoPayload, // Save current shapes and colors for redo
+                                },
+                            },
+                        ]);
+                    }
+                     break;
+                    
             case 'changeSize':
-                // Undo the size change for a single node
-                const nodeToRevert2 = nodes.find(n => n.id === lastAction.payload?.nodeId);
-                if (nodeToRevert2) {
-                    // Restore the original size
-                    nodeToRevert2.size = lastAction.payload.originalSize;
-                    setNodes([...nodes]); // Trigger re-render to update node size
-                }
-                break;
+                        // Undo the size change for a single node
+                        const nodeToRevert2 = nodes.find(n => n.id === lastAction.payload?.nodeId);
+                        if (nodeToRevert2) {
+                            // Restore the original size
+                            nodeToRevert2.size = lastAction.payload.originalSize;
+                            setNodes([...nodes]); // Trigger re-render to update node size
+                        }
+                    break;
 
             case 'changeMultipleSizes':
-                // Undo the size change for multiple nodes
-                for (const originalNode of lastAction.payload.originalSizes) {
-                    const node = nodes.find(n => n.id === originalNode.id);
-                    if (node) {
-                        // Restore the original size for each node
-                        node.size = originalNode.size;
-                    }
-                }
-                setNodes([...nodes]); // Trigger re-render to update node sizes
-                break;
+                        // Undo the size change for multiple nodes
+                        const updatedNodes = nodes.map(node => {
+                            // Find the corresponding original size in the payload
+                            const originalNode = lastAction.payload.originalSizes.find(n => n.id === node.id);
+                            if (originalNode) {
+                                // Restore the original size if found
+                                return { ...node, size: originalNode.size };
+                            }
+                            return node; // Return unchanged node if not part of the action
+                        });
+                    
+                        // Save the current sizes to redoHistory for potential redo
+                        const currentSizes = nodes.map(node => ({
+                            id: node.id,
+                            size: node.size,
+                        }));
+                    
+                        setRedoHistory(prev => [
+                            ...prev,
+                            {
+                                action: 'changeMultipleSizes',
+                                payload: { originalSizes: currentSizes },
+                            },
+                        ]);
+                    
+                        // Update the nodes state
+                        setNodes(updatedNodes);
+                        break;
+
 
             case 'changeLinkType':
-                // Undo the link type change by reverting to the original type
-                const linkToRevert = links.find(l => l.id === lastAction.payload.linkId);
-                if (linkToRevert) {
-                    // Remove the new type association
-                    switch (linkToRevert.type) {
-                        case 'Assesses':
-                            nodes.find(n => n.id === linkToRevert.source.id).assesses = null;
-                            break;
-                        case 'Comes After':
-                            nodes.find(n => n.id === linkToRevert.source.id).comesAfter = null;
-                            break;
-                        case 'Is Part Of':
-                            nodes.find(n => n.id === linkToRevert.source.id).isPartOf = null;
-                            break;
-                    }
-
-                    // Restore the original type association
-                    switch (lastAction.payload.originalType) {
-                        case 'Assesses':
-                            nodes.find(n => n.id === linkToRevert.source.id).assesses = linkToRevert.target.id;
-                            break;
-                        case 'Comes After':
-                            nodes.find(n => n.id === linkToRevert.source.id).comesAfter = linkToRevert.target.id;
-                            break;
-                        case 'Is Part Of':
-                            nodes.find(n => n.id === linkToRevert.source.id).isPartOf = linkToRevert.target.id;
-                            break;
-                    }
-
-                    // Restore the original type to the link
-                    linkToRevert.type = lastAction.payload.originalType;
-
-                    // Update the nodes state to trigger a re-render
-                    setNodes([...nodes]);
-                    updateSavedNodes(); // Optionally update the saved state
-                }
-                break;
-
-
-
+                        // Undo the link type change by reverting to the original type
+                        const linkToRevert = links.find(l => l.id === lastAction.payload.linkId);
+                        if (linkToRevert) {
+                            // Remove the new type association
+                            switch (linkToRevert.type) {
+                                case 'Assesses':
+                                    nodes.find(n => n.id === linkToRevert.source.id).assesses = null;
+                                    break;
+                                case 'Comes After':
+                                    nodes.find(n => n.id === linkToRevert.source.id).comesAfter = null;
+                                    break;
+                                case 'Is Part Of':
+                                    nodes.find(n => n.id === linkToRevert.source.id).isPartOf = null;
+                                    break;
+                            }
+            
+                            // Restore the original type association
+                            switch (lastAction.payload.originalType) {
+                              
+                                case 'Assesses':
+                                    nodes.find(n => n.id === linkToRevert.source.id).assesses = linkToRevert.target.id;
+                                    break;
+                                case 'Comes After':
+                                    nodes.find(n => n.id === linkToRevert.source.id).comesAfter = linkToRevert.target.id;
+                                    break;
+                                case 'Is Part Of':
+                                    nodes.find(n => n.id === linkToRevert.source.id).isPartOf = linkToRevert.target.id;
+                                    break;
+                            }
+            
+                            // Restore the original type to the link
+                            linkToRevert.type = lastAction.payload.originalType;
+            
+                            // Update the nodes state to trigger a re-render
+                            setNodes([...nodes]);
+                            updateSavedNodes(); // Optionally update the saved state
+                        }
+                    break;
+            
+                
+        
             default:
                 break;
         }
+       
         setHistory(prev => prev.slice(0, -1));
     };
 
+    const handleRedo = () => {
+        if (redoHistory.length === 0) return;
+        const lastUndoneAction = redoHistory[redoHistory.length - 1];
+        switch (lastUndoneAction.action) {
+            
+            case 'addNode':
+               console.log(lastUndoneAction.payload.id)
+               originalIdRef.current = lastUndoneAction.payload.id;
+               originalComesAfterRef.current = lastUndoneAction.payload.comesAfter;
+               originalIsPartOfRef.current = lastUndoneAction.payload.isPartOf;
+
+                 const nodeToAdd = {
+                     ...lastUndoneAction.payload,
+                      comesAfter: null,
+                      isPartOf: null,
+                 };
+                setNodes([...nodes, nodeToAdd]);
+                setHistory([...history, lastUndoneAction]);
+                break;
+            case 'addLink':
+            const originalId = originalIdRef.current;
+            
+                setNodes(nodes => {
+  // Find the index of the node with the matching ID
+  const nodeIndex = nodes.findIndex(node => node.id === originalId);
+  console.log(originalId)
+console.log(nodeIndex)
+  // If the node is found, modify it in place
+  if (nodeIndex !== -1) {
+    // Directly modify the comesAfter and isPartOf properties of the node at the found index
+    nodes[nodeIndex] = {
+      ...nodes[nodeIndex], // Keep all other properties of the node
+      comesAfter: originalComesAfterRef.current, // Restore the original comesAfter value
+      isPartOf: originalIsPartOfRef.current     // Restore the original isPartOf value
+    };
+  }
+
+  // Return the updated nodes array (React will detect this as a change due to reference change)
+  return [...nodes];  // We create a new array reference so React re-renders
+});
+console.log(nodes)
+                 setLinks([...links, lastUndoneAction.payload]);
+
+                setRedoHistory(prev => prev.slice(0, -1));
+                setHistory([...history, lastUndoneAction]);
+                break;
+            case 'removeNode':
+                setNodes(nodes.filter(n => n.id !== lastUndoneAction.payload.node.id));
+                setLinks(links.filter(l => 
+                    l.source.id !== lastUndoneAction.payload.node.id &&
+                    l.target.id !== lastUndoneAction.payload.node.id
+                ));
+                setHistory([...history, lastUndoneAction]);
+                break;
+            case 'removeLink':
+                setLinks(links.filter(l => 
+                    l.source.id !== lastUndoneAction.payload.source.id ||
+                    l.target.id !== lastUndoneAction.payload.target.id
+                ));
+                setHistory([...history, lastUndoneAction]);
+                break;
+            case 'reverseLink':
+                const { originalLink, newLink } = lastUndoneAction.payload;
+                const reversedLinks = links.map(link => 
+                    link.source.id === originalLink.source.id && 
+                    link.target.id === originalLink.target.id ? newLink : link
+                );
+                setLinks(reversedLinks);
+                setHistory([...history, lastUndoneAction]);
+                break;
+            case 'changeShape':
+                    // Handle changeShape redo
+                    const nodeToRedo = nodes.find(n => n.id === lastUndoneAction.payload?.nodeId);
+                    if (nodeToRedo) {
+                        // Apply redo changes
+                        nodeToRedo.shape = lastUndoneAction.payload.newShape;
+                        nodeToRedo.color = lastUndoneAction.payload.newColor;
+                
+                        // Update the nodes array by replacing the updated node
+                        const updatedNodes = nodes.map(n => 
+                            n.id === nodeToRedo.id ? nodeToRedo : n
+                        );
+                       
+                
+                        setNodes(updatedNodes); // Trigger re-render with updated nodes
+                        setRedoHistory(redoHistory.slice(1));
+                        setHistory([...history, lastUndoneAction]);
+                    }
+                  
+                    break;
+                    case 'changeMultipleShapes':
+                            console.log(lastUndoneAction.payload);
+                        
+                            if (lastUndoneAction.payload.originalShapes) {
+                                // Create a copy of the nodes array to modify
+                                const updatedNodes = nodes.map(n => ({ ...n })); 
+                        
+                                // Collect the current shapes and colors of the affected nodes for undo
+                                const undoPayload = updatedNodes
+                                    .filter(n => lastUndoneAction.payload.originalShapes.some(o => o.id === n.id))
+                                    .map(n => ({
+                                        id: n.id,
+                                        shape: n.shape,
+                                        color: n.color,
+                                    }));
+
+                                setHistory(prevUndoHistory => [
+                                    ...prevUndoHistory,
+                                    {
+                                        action: 'changeMultipleShapes',
+                                        payload: {
+                                            originalShapes: undoPayload, // Save current shapes and colors for undo
+                                        },
+                                    },
+                                ]);
+                        
+                                // Apply the redo changes to the updatedNodes array
+                                for (const updatedNode of lastUndoneAction.payload.originalShapes) {
+                                    const node = updatedNodes.find(n => n.id === updatedNode.id);
+                                    if (node) {
+                                        node.shape = updatedNode.shape;
+                                        node.color = updatedNode.color;
+                                    }
+                                }
+                        
+                                // Update nodes with the modified array
+                                setNodes(updatedNodes);
+                        
+
+                            }
+                            break;
+                        
+            case 'changeSize':
+                const nodeToResize = nodes.find(n => n.id === lastUndoneAction.payload.nodeId);
+                if (nodeToResize) {
+                    nodeToResize.size = lastUndoneAction.payload.originalSize;
+                    setNodes([...nodes]);
+                }
+                setHistory([...history, lastUndoneAction]);
+                break;
+            case 'changeMultipleSizes':
+                    // Redo the size change for multiple nodes
+                    const updatedNodes = nodes.map(node => {
+                        // Find the size to be restored in the redo action
+                        const newSizeNode = lastUndoneAction.payload.originalSizes.find(n => n.id === node.id);
+                        if (newSizeNode) {
+                            // Apply the new size from redo history
+                            return { ...node, size: newSizeNode.size };
+                        }
+                        return node; // Return unchanged node if not part of the redo action
+                    });
+                
+                    // Save the current sizes to the undo history for future undo
+                    const sizesBeforeRedo = nodes.map(node => ({
+                        id: node.id,
+                        size: node.size,
+                    }));
+                
+                    setHistory(prev => [
+                        ...prev,
+                        {
+                            action: 'changeMultipleSizes',
+                            payload: { originalSizes: sizesBeforeRedo },
+                        },
+                    ]);
+                
+                    // Remove the last redo action from redo history
+                    setRedoHistory(prev => prev.slice(0, -1));
+                
+                    // Update the nodes state to apply the redone sizes
+                    setNodes(updatedNodes);
+                    setHistory([...history, lastUndoneAction]);
+                    break;
+            // case 'changeLinkType':
+            //     const linkToRedo = links.find(l => l.id === lastUndoneAction.payload.linkId);
+            //     if (linkToRedo) {
+            //         // Reverse the previous undo (apply the original type back)
+            //         switch (lastUndoneAction.payload.originalType) {
+            //             case 'Assesses':
+            //                 nodes.find(n => n.id === lastUndoneAction.payload.sourceNodeId).assesses = linkToRedo.target.id;
+            //                 break;
+            //             case 'Comes After':
+            //                 nodes.find(n => n.id === lastUndoneAction.payload.sourceNodeId).comesAfter = linkToRedo.target.id;
+            //                 break;
+            //             case 'Is Part Of':
+            //                 nodes.find(n => n.id === lastUndoneAction.payload.sourceNodeId).isPartOf = linkToRedo.target.id;
+            //                 break;
+            //         }
+        
+            //         // Apply the new type to the link
+            //         linkToRedo.type = lastUndoneAction.payload.originalType;
+        
+            //         // Update the nodes state to trigger a re-render
+            //         setNodes([...nodes]);
+            //         updateSavedNodes(); // Optionally update the saved state
+        
+            //         // Remove the redo action after it's applied
+            //         setRedoHistory(prevRedoHistory => prevRedoHistory.slice(0, -1));
+            //     }
+            // break;
+            default:
+                break;
+        }
+    
+        // Move the action from redoHistory back to history
+        setRedoHistory(prev => prev.slice(0, -1));
+    
+    };
 
     const handleRemoveNode = () => {
         let nodeId = null;
@@ -1241,9 +1533,15 @@ const NetworkGraph = () => {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
+                    setHistory([]);
+                    setRedoHistory([]);
+                    // Set the filter type to 3
+                    setFilterType(3);
+                    handleFilterNodes(3);
                     const text = e.target.result;
                     setFilterType('3');
                     parseCSV(text);
+
                 } catch (error) {
                     // Display error popup
                     setIsAlertError(true);
@@ -1378,6 +1676,30 @@ const NetworkGraph = () => {
         });
         return newLinks;
     };
+    
+    const handleCollapse = () => {
+        console.log(selectedNode)
+    
+        const id = selectedNode.id
+    
+        const updatedNodes = nodes.map((node) => {
+            // Toggle the 'hidden' property based on current collapse state
+            console.log(node.isPartOf)
+            if (node.isPartOf === id) {
+                return { ...node, hidden: !isCollapsed }; // Toggle visibility
+            }
+            return node;
+        });
+    
+        // Update the nodes state
+        setNodes([...updatedNodes]);
+    
+        // Toggle the collapse state
+        setIsCollapsed((prevState) => !prevState);
+    
+      };
+    
+    
 
     const handleAddLink = () => {
         setLinkingNode(selectedNode);
@@ -1671,31 +1993,15 @@ const NetworkGraph = () => {
         <div>
             <div className='navbar'>
                 <Navbar onExportClick={handleExportClick} onDownloadCSV={downloadCSV} />
-                <Stack m={'0 auto'} spacing={0.5} direction='row'>
-                    <>
-                        <label htmlFor="csv-upload">
-                            <Button variant="contained" component="span" onClick={() => setDialogOpen2(true)}>
-                                Upload CSV
-                            </Button>
-                        </label>
-                    </>
+                <Stack m={'0 auto'} spacing={2} direction='row' >
+                <Button variant="contained" component="span" onClick={() => setDialogOpen2(true)}>Upload CSV</Button>
                     <Button onClick={() => setDialogOpen(true)} color={'error'} startIcon={<CgTrashEmpty />} variant="contained">Clear</Button>
                     <Button onClick={handleAddNode} startIcon={<Add />} variant="outlined">Add ER</Button>
                     <Button id='recenterButton' variant="outlined">Recenter</Button>
                     <Button onClick={nodes.length > 2 ? handleAutoLayout : null} color={'success'} variant="contained">Auto Layout</Button>
                     <Button onClick={handleUndo} startIcon={<UndoIcon />} variant="outlined" disabled={history.length === 0} >Undo</Button>
-                    <FormControlLabel sx={{ marginLeft: '2px' }}
-                        control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
-                        label={`${labelsToggled ? 'Hide' : 'Show'} Labels`}
-                    />
-                    <FormControlLabel sx={{ marginLeft: '2px' }}
-                        control={<Switch size="small" checked={legendToggled} onChange={() => setLegendToggled(!legendToggled)} />}
-                        label={`Legend ${!legendToggled ? '(Hidden)' : '(Showing)'} `}
-                    />
-                </Stack>
-                {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
-
-                <FormControl variant="outlined" style={{ position: 'absolute', size: 'small', right: '80px', margin: '6px', width: '150px' }}>
+                    <Button onClick={handleRedo} startIcon={<RedoIcon />} variant="outlined" disabled={redoHistory.length === 0} >Redo</Button>
+                    <FormControl variant="outlined">
                     <InputLabel>Views</InputLabel>
                     <Select
                         value={filterType}
@@ -1711,6 +2017,18 @@ const NetworkGraph = () => {
                         <MenuItem value="4">View 4: Requirements</MenuItem>
                     </Select>
                 </FormControl>
+                </Stack>
+                {/* <Button onClick={handleRemoveNode} startIcon={<Remove />} variant="outlined">Remove Node</Button> */}
+                <div style={{ position: 'absolute', bottom: '10px', left: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <FormControlLabel sx={{ marginLeft: '2px' }}
+                        control={<Switch size="small" checked={labelsToggled} onChange={() => setLabelsToggled(!labelsToggled)} />}
+                        label={`${labelsToggled ? 'Hide' : 'Show'} Labels`}
+                    />
+                    <FormControlLabel sx={{ marginLeft: '2px' }}
+                        control={<Switch size="small" checked={legendToggled} onChange={() => setLegendToggled(!legendToggled)} />}
+                        label={`Legend ${!legendToggled ? '(Hidden)' : '(Showing)'} `}
+                    />
+  </div>
             </div>
             <LinearProgress ref={progressRef} color="secondary" style={{ visibility: 'hidden', marginTop: '3px' }} />
 
@@ -1781,6 +2099,9 @@ const NetworkGraph = () => {
                     open={Boolean(anchorElNode)}
                     anchorEl={anchorElNode}
                     onClose={handleCloseNode}
+                    handleCollapse={handleCollapse}
+                    isCollapsed={isCollapsed}
+                    setIsCollapsed={setIsCollapsed}
                     handleAddLink={handleAddLink}
                     selectedNode={selectedNode}
                     selectedNodes={[]}
